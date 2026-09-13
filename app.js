@@ -749,7 +749,7 @@ function renderRelatorio(){
   const semProtocolo = computeSemProtocolo();
   const semProtocoloTotal = semProtocolo.reduce((s,g)=>s+g.valor,0);
   document.getElementById('tituloSemProtocolo').textContent =
-    `Lançamentos sem protocolo${semProtocolo.length ? ' — ' + fmtBRL(semProtocoloTotal) : ''}`;
+    `Trabalho ainda não enviado ao convênio${semProtocolo.length ? ' — ' + fmtBRL(semProtocoloTotal) : ''}`;
   const tblSem = document.getElementById('tblSemProtocolo');
   tblSem.innerHTML = semProtocolo.length===0
     ? `<tr><td colspan="5" class="empty">Nada esquecido — tudo que já passou do mês já está em algum protocolo.</td></tr>`
@@ -778,17 +778,42 @@ function renderRelatorio(){
   renderDetalheTable(document.getElementById('tblDetalhe'), detalhe);
 
   const kpis = document.getElementById('kpis');
-  const mesAtual = geral[0];
-  const marianaLiqTotal = marianaBruto[0].total * (1-state.repasseMariana);
+  const mesAtual = geral[0], mesProximo = geral[1];
+  const pct = Math.round(state.repasseMariana*100);
+  const repasseThis = marianaBruto[0].total * state.repasseMariana;
+  const repasseNext = marianaBruto[1].total * state.repasseMariana;
+  const liquidoThis = marianaBruto[0].total - repasseThis;
+  const liquidoNext = marianaBruto[1].total - repasseNext;
   kpis.innerHTML = `
-    <div class="kpi"><div class="label">A receber no total — ${monthLabel(mesAtual.mes)}</div><div class="value num">${fmtBRL(mesAtual.total)}</div></div>
-    <div class="kpi"><div class="label">Lenice recebe — ${monthLabel(mesAtual.mes)}</div><div class="value num">${fmtBRL(lenice[0].total)}</div></div>
-    <div class="kpi"><div class="label">Mariana recebe (líquido) — ${monthLabel(mesAtual.mes)}</div><div class="value num">${fmtBRL(marianaLiqTotal)}</div></div>
+    <div class="card">
+      <div class="card-pad">
+        <h2>Lenice</h2>
+        <p class="hint">O que ela ainda vai receber dos convênios, com base no que já foi lançado.</p>
+        <div class="proto-grid">
+          <div><div class="k">Este mês — ${monthLabel(mesAtual.mes)}</div><div class="v num" style="font-size:20px; font-weight:600">${fmtBRL(lenice[0].total)}</div></div>
+          <div><div class="k">Próximo mês — ${monthLabel(mesProximo.mes)}</div><div class="v num" style="font-size:20px; font-weight:600">${fmtBRL(lenice[1].total)}</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-pad">
+        <h2>Mariana</h2>
+        <p class="hint">Bruto dos convênios, o repasse de ${pct}% para a clínica, e o líquido que fica com ela.</p>
+        <div class="proto-grid">
+          <div><div class="k">Bruto — este mês</div><div class="v num">${fmtBRL(marianaBruto[0].total)}</div></div>
+          <div><div class="k">Bruto — próximo mês</div><div class="v num">${fmtBRL(marianaBruto[1].total)}</div></div>
+          <div><div class="k">Repasse (${pct}%) — este mês</div><div class="v num diff-bad">-${fmtBRL(repasseThis)}</div></div>
+          <div><div class="k">Repasse (${pct}%) — próximo mês</div><div class="v num diff-bad">-${fmtBRL(repasseNext)}</div></div>
+          <div><div class="k">Líquido — este mês</div><div class="v num" style="font-size:20px; font-weight:600">${fmtBRL(liquidoThis)}</div></div>
+          <div><div class="k">Líquido — próximo mês</div><div class="v num" style="font-size:20px; font-weight:600">${fmtBRL(liquidoNext)}</div></div>
+        </div>
+      </div>
+    </div>
   `;
 
   const pend = state.protocolos.filter(p=>!p.recebido && !p.arquivado).map(p=>({...p, ...protoAggregates(p.id)}))
     .sort((a,b)=> (a.dataPagamento||'9999').localeCompare(b.dataPagamento||'9999'));
-  document.getElementById('tituloPendentes').textContent = `Protocolos pendentes de conferência${pend.length ? ' (' + pend.length + ')' : ''}`;
+  document.getElementById('tituloPendentes').textContent = `Enviado ao convênio, aguardando cair no banco${pend.length ? ' (' + pend.length + ')' : ''}`;
   const tbody = document.getElementById('tblPendentes');
   tbody.innerHTML = pend.length===0 ? `<tr><td colspan="6" class="empty">Nenhum protocolo pendente.</td></tr>` :
     pend.map(p=>`<tr>
@@ -805,7 +830,7 @@ function renderRelatorio(){
     return {...p, diffAgrupamento, diffPagamento};
   }).filter(p=> Math.abs(p.diffAgrupamento)>=0.005 || (p.diffPagamento!==null && Math.abs(p.diffPagamento)>=0.005))
     .sort((a,b)=> b.mes.localeCompare(a.mes));
-  document.getElementById('tituloDiferencas').textContent = `Protocolos com diferença${comDiferenca.length ? ' (' + comDiferenca.length + ')' : ''}`;
+  document.getElementById('tituloDiferencas').textContent = `Valores que não batem${comDiferenca.length ? ' (' + comDiferenca.length + ')' : ''}`;
   const tblDif = document.getElementById('tblDiferencas');
   tblDif.innerHTML = comDiferenca.length===0 ? `<tr><td colspan="6" class="empty">Nenhuma diferença encontrada.</td></tr>` :
     comDiferenca.map(p=>`<tr>

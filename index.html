@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Fechamento Convênios</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="styles.css?v=20260913v">
+<link rel="stylesheet" href="styles.css?v=20260913w">
 </head>
 <body>
 
@@ -202,41 +202,43 @@
         </div>
       </div>
 
-      <div class="kpis" id="kpis"></div>
+      <h2 style="margin:0 0 4px">Quanto ainda vou receber</h2>
+      <p class="hint" style="margin:0 0 14px">Com base no que já foi lançado — vale mesmo que ainda não tenha entrado em nenhum protocolo.</p>
+      <div class="acao-grid" id="kpis"></div>
 
-      <h2 style="margin:26px 0 12px">Ação necessária</h2>
-      <div class="acao-grid">
-        <div class="card">
-          <div class="card-pad">
-            <h2 id="tituloSemProtocolo">Lançamentos sem protocolo</h2>
-            <p class="hint">Trabalho de meses já fechados que ainda não foi enviado a nenhum convênio (Particular não conta - não passa por protocolo).</p>
-            <div class="table-wrap"><table>
-              <thead><tr><th>Convênio</th><th>Mês</th><th class="right">Qtde</th><th class="right">Valor</th><th></th></tr></thead>
-              <tbody id="tblSemProtocolo"></tbody>
-            </table></div>
-          </div>
+      <h2 style="margin:30px 0 4px">O que precisa de atenção</h2>
+      <p class="hint" style="margin:0 0 14px">Do lançamento até o dinheiro cair no banco — em que ponto cada etapa está.</p>
+
+      <div class="card">
+        <div class="card-pad">
+          <h2 id="tituloSemProtocolo">Trabalho ainda não enviado ao convênio</h2>
+          <p class="hint">Atendimentos já lançados que ainda não entraram em nenhum protocolo — o convênio nem sabe que precisa pagar por isso ainda (Particular não conta, não passa por protocolo).</p>
+          <div class="table-wrap"><table>
+            <thead><tr><th>Convênio</th><th>Mês</th><th class="right">Qtde</th><th class="right">Valor</th><th></th></tr></thead>
+            <tbody id="tblSemProtocolo"></tbody>
+          </table></div>
         </div>
+      </div>
 
-        <div class="card">
-          <div class="card-pad">
-            <h2 id="tituloPendentes">Protocolos pendentes de conferência</h2>
-            <p class="hint">Já enviados ao convênio, aguardando confirmar que o valor caiu no banco.</p>
-            <div class="table-wrap"><table>
-              <thead><tr><th>Convênio</th><th>Mês</th><th>Protocolo</th><th class="right">Valor esperado</th><th>Pagamento esperado</th><th></th></tr></thead>
-              <tbody id="tblPendentes"></tbody>
-            </table></div>
-          </div>
+      <div class="card">
+        <div class="card-pad">
+          <h2 id="tituloPendentes">Enviado ao convênio, aguardando cair no banco</h2>
+          <p class="hint">Protocolos já montados e enviados — falta confirmar se o valor apareceu na conta.</p>
+          <div class="table-wrap"><table>
+            <thead><tr><th>Convênio</th><th>Mês</th><th>Protocolo</th><th class="right">Valor esperado</th><th>Pagamento esperado</th><th></th></tr></thead>
+            <tbody id="tblPendentes"></tbody>
+          </table></div>
         </div>
+      </div>
 
-        <div class="card">
-          <div class="card-pad">
-            <h2 id="tituloDiferencas">Protocolos com diferença</h2>
-            <p class="hint">Lançamentos × protocolo (agrupamento errado) ou protocolo × recebido (pagamento incompleto).</p>
-            <div class="table-wrap"><table>
-              <thead><tr><th>Convênio</th><th>Mês</th><th>Protocolo</th><th class="right">Agrupamento</th><th class="right">Pagamento</th><th></th></tr></thead>
-              <tbody id="tblDiferencas"></tbody>
-            </table></div>
-          </div>
+      <div class="card">
+        <div class="card-pad">
+          <h2 id="tituloDiferencas">Valores que não batem</h2>
+          <p class="hint">O que foi lançado não bate com o que o convênio informou (agrupamento), ou o que foi informado não bate com o que caiu no banco (pagamento).</p>
+          <div class="table-wrap"><table>
+            <thead><tr><th>Convênio</th><th>Mês</th><th>Protocolo</th><th class="right">Agrupamento</th><th class="right">Pagamento</th><th></th></tr></thead>
+            <tbody id="tblDiferencas"></tbody>
+          </table></div>
         </div>
       </div>
 
@@ -326,7 +328,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=20260913v"></script>
-<script src="app.js?v=20260913v"></script>
+<script src="config.js?v=20260913w"></script>
+<script src="app.js?v=20260913w"></script>
 </body>
 </html>
