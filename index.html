@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fechamento Convênios</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div class="app">
+  <div class="sidebar">
+    <div class="brand">
+      <div class="mark">Fechamento</div>
+      <div class="sub">CONVÊNIOS · LENICE &amp; MARIANA</div>
+    </div>
+    <nav class="nav" id="nav">
+      <button data-view="lancamentos" class="active">Lançamentos</button>
+      <button data-view="protocolos">Protocolos</button>
+      <button data-view="relatorio">Relatório</button>
+      <button data-view="parametros">Parâmetros</button>
+    </nav>
+    <div class="status"><span class="dot off" id="statusDot"></span><span id="statusText">conectando…</span></div>
+  </div>
+
+  <div class="main">
+
+    <!-- ================= LANÇAMENTOS ================= -->
+    <section class="view active" id="view-lancamentos">
+      <div class="view-head">
+        <div>
+          <h1>Lançamentos</h1>
+          <p>Um item faturado por linha — consulta ou exame, com o preço já daquele convênio.</p>
+        </div>
+        <button class="btn" id="btnNovoLancamento">+ Novo lançamento</button>
+      </div>
+
+      <div class="card" id="formNovoLancamento" hidden>
+        <div class="card-pad">
+          <h2 id="formTitulo">Novo lançamento</h2>
+          <div class="toolbar" style="margin-top:12px">
+            <div class="field"><label>Data</label><input type="date" id="fData"></div>
+            <div class="field"><label>Médica</label>
+              <select id="fMedica"><option value="LENICE">Lenice</option><option value="MARIANA">Mariana</option></select>
+            </div>
+            <div class="field"><label>Convênio</label>
+              <select id="fConvenio">
+                <option value="AMIL">Amil</option><option value="BRADESCO">Bradesco</option>
+                <option value="PORTO_SEGURO">Porto Seguro</option><option value="UNIMED">Unimed</option>
+                <option value="PARTICULAR">Particular</option>
+              </select>
+            </div>
+            <div class="field"><label>Tipo</label>
+              <select id="fTipo"><option value="CONSULTA">Consulta</option><option value="EXAME">Exame</option></select>
+            </div>
+            <div class="field"><label>Procedimento</label>
+              <select id="fProcedimento"></select>
+            </div>
+            <div class="field" id="fProcedimentoOutroWrap" hidden><label>Especifique</label><input type="text" id="fProcedimentoOutro" placeholder="Nome do exame"></div>
+            <div class="field" style="flex:1; min-width:180px"><label>Paciente</label><input type="text" id="fPaciente" placeholder="Nome do paciente"></div>
+            <div class="field"><label>Valor (R$)</label><input type="number" step="0.01" id="fValor" placeholder="0,00"></div>
+            <button class="btn" id="btnSalvarLancamento">Salvar</button>
+            <button class="btn secondary" id="btnCancelarLancamento">Cancelar</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card card-pad">
+        <div class="filter-bar">
+          <div class="filter-label">🔎 Filtros — não afetam os dados, só o que aparece na lista abaixo</div>
+          <div class="toolbar">
+            <div class="field"><label>Médica</label>
+              <select id="filMedica"><option value="">Todas</option><option value="LENICE">Lenice</option><option value="MARIANA">Mariana</option></select>
+            </div>
+            <div class="field"><label>Convênio</label>
+              <select id="filConvenio"><option value="">Todos</option>
+                <option value="AMIL">Amil</option><option value="BRADESCO">Bradesco</option>
+                <option value="PORTO_SEGURO">Porto Seguro</option><option value="UNIMED">Unimed</option>
+                <option value="PARTICULAR">Particular</option>
+              </select>
+            </div>
+            <div class="field"><label>Mês</label><select id="filMes"><option value="">Todos</option></select></div>
+            <div class="field"><label>Dia</label>
+              <select id="filDia"><option value="">Todos</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option><option value="11">11</option><option value="12">12</option><option value="13">13</option><option value="14">14</option><option value="15">15</option><option value="16">16</option><option value="17">17</option><option value="18">18</option><option value="19">19</option><option value="20">20</option><option value="21">21</option><option value="22">22</option><option value="23">23</option><option value="24">24</option><option value="25">25</option><option value="26">26</option><option value="27">27</option><option value="28">28</option><option value="29">29</option><option value="30">30</option><option value="31">31</option></select>
+            </div>
+            <div class="field" style="flex:1; min-width:160px"><label>Paciente</label><input type="text" id="filPaciente" placeholder="buscar…"></div>
+            <button class="btn secondary" id="btnLimparFiltros">Limpar filtros</button>
+            <div class="field"><label>&nbsp;</label><span class="pill neutral" id="filCount">0 itens</span></div>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Data</th><th>Médica</th><th>Convênio</th><th>Tipo</th><th>Procedimento</th><th>Paciente</th><th class="right">Valor</th><th>Protocolo</th><th></th></tr></thead>
+            <tbody id="tblLancamentos"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= PROTOCOLOS ================= -->
+    <section class="view" id="view-protocolos">
+      <div class="view-head">
+        <div>
+          <h1>Protocolos</h1>
+          <p>O convênio decide como agrupar os pagamentos — aqui vocês registram esse agrupamento e conferem se nada ficou de fora.</p>
+        </div>
+      </div>
+
+      <div class="card card-pad">
+        <div class="toolbar">
+          <div class="field"><label>Convênio</label>
+            <select id="protConvenio">
+              <option value="">Selecione…</option>
+              <option value="AMIL">Amil</option><option value="BRADESCO">Bradesco</option>
+              <option value="PORTO_SEGURO">Porto Seguro</option><option value="UNIMED">Unimed</option>
+            </select>
+          </div>
+          <div class="field"><label>Mês de atendimento</label><select id="protMes"><option value="">Selecione…</option></select></div>
+        </div>
+        <div id="protBanner"></div>
+      </div>
+
+      <div id="protPending" hidden>
+        <div class="card">
+          <div class="card-pad">
+            <h2>Itens sem protocolo</h2>
+            <p class="hint">Marque todos os que o convênio agrupou no mesmo protocolo de pagamento.</p>
+            <div class="check-list" id="protCheckList"></div>
+            <div class="toolbar" style="margin-top:14px; align-items:flex-end">
+              <div class="field"><label>Número do protocolo</label><input type="text" id="protNumero" placeholder="ex: 3102308888250"></div>
+              <div class="field"><label>Valor informado pelo convênio (opcional)</label><input type="number" step="0.01" id="protValorInformado" placeholder="0,00"></div>
+              <button class="btn" id="btnCriarProtocolo" disabled>Criar protocolo</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-pad">
+            <h2>Protocolos deste convênio/mês</h2>
+            <div id="protList"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= RELATÓRIO ================= -->
+    <section class="view" id="view-relatorio">
+      <div class="view-head">
+        <div>
+          <h1>Relatório</h1>
+          <p>Previsão dos próximos meses e o que ainda falta conferir contra o banco.</p>
+        </div>
+      </div>
+
+      <div class="kpis" id="kpis"></div>
+
+      <h2 style="margin:26px 0 12px">Ação necessária</h2>
+      <div class="acao-grid">
+        <div class="card">
+          <div class="card-pad">
+            <h2 id="tituloSemProtocolo">Atendimentos sem protocolo</h2>
+            <p class="hint">Trabalho de meses já fechados que ainda não foi enviado a nenhum convênio (Particular não conta - não passa por protocolo).</p>
+            <div class="table-wrap"><table>
+              <thead><tr><th>Convênio</th><th>Mês</th><th class="right">Qtde</th><th class="right">Valor</th><th></th></tr></thead>
+              <tbody id="tblSemProtocolo"></tbody>
+            </table></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-pad">
+            <h2 id="tituloPendentes">Protocolos pendentes de conferência</h2>
+            <p class="hint">Já enviados ao convênio, aguardando confirmar que o valor caiu no banco.</p>
+            <div class="table-wrap"><table>
+              <thead><tr><th>Convênio</th><th>Mês</th><th>Protocolo</th><th class="right">Valor esperado</th><th>Pagamento esperado</th><th></th></tr></thead>
+              <tbody id="tblPendentes"></tbody>
+            </table></div>
+          </div>
+        </div>
+      </div>
+
+      <h2 style="margin:30px 0 12px">Detalhe mensal</h2>
+
+      <div class="card">
+        <div class="card-pad">
+          <h2>Total geral por convênio</h2>
+          <p class="hint">O que cada convênio deve pagar no total, somando as duas médicas.</p>
+          <div class="table-wrap" id="tblGeral"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-pad">
+          <h2>Lenice</h2>
+          <div class="table-wrap" id="tblLenice"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-pad">
+          <h2>Mariana — bruto</h2>
+          <p class="hint">Antes do repasse para a clínica.</p>
+          <div class="table-wrap" id="tblMarianaBruto"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-pad">
+          <h2>Mariana — líquido</h2>
+          <p class="hint">Depois do repasse de <span id="repassePct">30%</span> para a clínica.</p>
+          <div class="table-wrap" id="tblMarianaLiquido"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-pad">
+          <h2>Detalhe por convênio — consulta × exame</h2>
+          <div class="table-wrap" id="tblDetalhe"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= PARÂMETROS ================= -->
+    <section class="view" id="view-parametros">
+      <div class="view-head">
+        <div>
+          <h1>Parâmetros</h1>
+          <p>As regras que a planilha usa para prever quando cada convênio paga. Editem à vontade — nada aqui é fixo no código.</p>
+        </div>
+      </div>
+
+      <div class="card card-pad">
+        <h2>Repasse da Mariana para a clínica</h2>
+        <p class="hint">Percentual descontado de tudo que a Mariana fatura (não se aplica à Lenice).</p>
+        <div class="toolbar" style="align-items:flex-end">
+          <div class="field"><label>Percentual (%)</label><input type="number" step="1" min="0" max="100" id="fRepasse"></div>
+          <button class="btn" id="btnSalvarRepasse">Salvar</button>
+        </div>
+      </div>
+
+      <div class="card card-pad">
+        <h2>Prazos por convênio</h2>
+        <p class="hint">Quantos meses depois do atendimento o convênio paga, e em qual dia. Unimed usa a tabela mês a mês abaixo em vez do dia fixo aqui.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Convênio</th><th>Tipo</th><th>Atraso (meses)</th><th>Dia do pagamento</th><th></th></tr></thead>
+            <tbody id="tblParametros"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card card-pad">
+        <h2>Prazos da Unimed por mês</h2>
+        <p class="hint">A Unimed não paga sempre no mesmo dia — atualizem o dia de pagamento assim que souberem o calendário real de cada mês. Quinzena 1-15 e quinzena 16-30 são decididas automaticamente pela data do atendimento.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Mês de atendimento</th><th>Quinzena</th><th>Dia do pagamento</th><th></th></tr></thead>
+            <tbody id="tblUnimedPrazos"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
