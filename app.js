@@ -123,7 +123,7 @@ document.getElementById('nav').addEventListener('click', e=>{
 });
 
 // ---------------- Lançamentos ----------------
-const PROCEDIMENTOS_EXAME = ["TONO","RETINO","MR","TOPO","PAQUI","BIO","GONIO","US","T. SCHIRMER","SADT"];
+const PROCEDIMENTOS_EXAME = ["TONO","RETINO","MR","TOPO","PAQUI","BIO","GONIO","US","T. SCHIRMER"];
 let editingId = null;
 
 function refreshProcedimentoOptions(){
@@ -164,6 +164,7 @@ function resetForm(){
 document.getElementById('btnNovoLancamento').addEventListener('click', ()=>{
   resetForm();
   document.getElementById('formNovoLancamento').hidden = false;
+  document.getElementById('formNovoLancamento').scrollIntoView({behavior:'smooth', block:'start'});
 });
 document.getElementById('btnCancelarLancamento').addEventListener('click', ()=>{
   document.getElementById('formNovoLancamento').hidden = true;
@@ -268,11 +269,11 @@ function renderLancamentos(){
     const proto = a.protocolo_id ? (state.protocolos.find(p=>p.id===a.protocolo_id)?.numero || '—') : '—';
     return `<tr>
       <td>${a.data.split('-').reverse().join('/')}</td>
+      <td>${a.paciente||''}</td>
       <td>${a.medica==='LENICE'?'Lenice':'Mariana'}</td>
       <td>${CONVENIO_LABEL[a.convenio]||a.convenio}</td>
       <td>${a.tipo_servico==='CONSULTA'?'Consulta':'Exame'}</td>
       <td>${a.procedimento||''}</td>
-      <td>${a.paciente||''}</td>
       <td class="right num">${fmtBRL(a.valor)}</td>
       <td>${a.protocolo_id ? `<span class="pill neutral">${proto}</span>` : '<span class="pill amber">sem protocolo</span>'}</td>
       <td style="white-space:nowrap">
@@ -373,13 +374,13 @@ function renderProtocolos(){
         <button class="btn secondary" style="margin-top:10px" data-toggleitems="${p.id}">${expanded ? 'Ocultar' : 'Ver'} itens (${agg.items.length})</button>
         <div class="table-wrap" ${expanded?'':'hidden'} data-itemswrap="${p.id}">
           <table>
-            <thead><tr><th>Data</th><th>Médica</th><th>Tipo</th><th>Procedimento</th><th>Paciente</th><th class="right">Valor</th></tr></thead>
+            <thead><tr><th>Data</th><th>Paciente</th><th>Médica</th><th>Tipo</th><th>Procedimento</th><th class="right">Valor</th></tr></thead>
             <tbody>${itemsSorted.map(it=>`<tr>
               <td>${it.data.split('-').reverse().join('/')}</td>
+              <td>${it.paciente||''}</td>
               <td>${it.medica==='LENICE'?'Lenice':'Mariana'}</td>
               <td>${it.tipo_servico==='CONSULTA'?'Consulta':'Exame'}</td>
               <td>${it.procedimento||''}</td>
-              <td>${it.paciente||''}</td>
               <td class="right num">${fmtBRL(it.valor)}</td>
             </tr>`).join('')}</tbody>
           </table>
