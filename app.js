@@ -449,6 +449,8 @@ document.getElementById('btnCriarProtocoloShell').addEventListener('click', asyn
       numero, convenio, mes, valor_informado: valorInformado,
       recebido:false, data_recebida:null, valor_recebido:null
     });
+    novo.valor_informado = Number(novo.valor_informado);
+    state.protocolos.push(novo); // realtime refresh hasn't round-tripped yet; add it locally so it's found right away
     openVincular(novo.id, convenio, mes);
   } catch(err){
     alert('Não foi possível criar o protocolo (' + (err && err.message || 'erro') + '). Tente novamente.');
