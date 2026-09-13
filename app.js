@@ -166,6 +166,7 @@ function resetForm(){
 
 document.getElementById('btnNovoLancamento').addEventListener('click', ()=>{
   resetForm();
+  document.getElementById('btnSalvarNovoLancamento').hidden = false;
   document.getElementById('formNovoLancamento').hidden = false;
   document.getElementById('formNovoLancamento').scrollIntoView({behavior:'smooth', block:'start'});
 });
@@ -184,6 +185,7 @@ function abrirEdicao(id){
   editingId = id;
   document.getElementById('formTitulo').textContent = 'Editar lançamento';
   document.getElementById('btnSalvarLancamento').textContent = 'Salvar edição';
+  document.getElementById('btnSalvarNovoLancamento').hidden = true;
   document.getElementById('fData').value = a.data;
   document.getElementById('fMedica').value = a.medica;
   document.getElementById('fConvenio').value = a.convenio;
@@ -204,7 +206,7 @@ function abrirEdicao(id){
   document.getElementById('formNovoLancamento').scrollIntoView({behavior:'smooth', block:'start'});
 }
 
-document.getElementById('btnSalvarLancamento').addEventListener('click', async ()=>{
+async function salvarLancamento(btn, keepOpenForNext){
   const data = document.getElementById('fData').value;
   const medica = document.getElementById('fMedica').value;
   const convenio = document.getElementById('fConvenio').value;
@@ -215,7 +217,6 @@ document.getElementById('btnSalvarLancamento').addEventListener('click', async (
   let procedimento = document.getElementById('fProcedimento').value;
   if(procedimento === '__outro') procedimento = document.getElementById('fProcedimentoOutro').value.trim() || 'EXAME';
   const doc = { data, medica, convenio, tipo_servico: tipo, procedimento, paciente, valor };
-  const btn = document.getElementById('btnSalvarLancamento');
   const originalText = btn.textContent;
   btn.disabled = true; btn.textContent = 'Salvando…';
   try{
@@ -224,13 +225,28 @@ document.getElementById('btnSalvarLancamento').addEventListener('click', async (
     } else {
       await sbInsert('atendimentos', doc);
     }
-    document.getElementById('formNovoLancamento').hidden = true;
-    editingId = null;
+    if(keepOpenForNext){
+      editingId = null;
+      document.getElementById('fTipo').value = '';
+      refreshProcedimentoOptions();
+      document.getElementById('fProcedimentoOutro').value = '';
+      document.getElementById('fValor').value = '';
+      document.getElementById('fTipo').focus();
+    } else {
+      document.getElementById('formNovoLancamento').hidden = true;
+      editingId = null;
+    }
   } catch(err){
     alert('Não foi possível salvar (' + (err && err.message || 'erro') + '). Tente novamente.');
   } finally {
     btn.disabled = false; btn.textContent = originalText;
   }
+}
+document.getElementById('btnSalvarLancamento').addEventListener('click', ()=>{
+  salvarLancamento(document.getElementById('btnSalvarLancamento'), false);
+});
+document.getElementById('btnSalvarNovoLancamento').addEventListener('click', ()=>{
+  salvarLancamento(document.getElementById('btnSalvarNovoLancamento'), true);
 });
 refreshProcedimentoOptions();
 
