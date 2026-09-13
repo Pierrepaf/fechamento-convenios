@@ -402,9 +402,9 @@ function openVincular(protocoloId, convenio, mes){
   vinculacao = { protocoloId, convenio, mes };
   const p = state.protocolos.find(x=>x.id===protocoloId);
   document.getElementById('vincularInfo').innerHTML = p ? `
-    <div><div class="k">Protocolo</div><div class="v">${p.numero}</div></div>
     <div><div class="k">Convênio</div><div class="v">${CONVENIO_LABEL[convenio]||convenio}</div></div>
     <div><div class="k">Mês</div><div class="v">${monthLabel(mes)}</div></div>
+    <div><div class="k">Protocolo</div><div class="v">${p.numero}</div></div>
     <div><div class="k">Valor informado</div><div class="v">${p.valor_informado ? fmtBRL(p.valor_informado) : '—'}</div></div>
   ` : '';
   document.getElementById('formNovoProtocolo').hidden = true;
@@ -499,9 +499,13 @@ function renderProtocolos(){
       const expanded = expandedProtocolos.has(p.id);
       const itemsSorted = [...agg.items].sort((a,b)=> a.data.localeCompare(b.data));
       return `<div class="proto-card">
-        <div class="top"><span class="num">Protocolo ${p.numero}</span>
-          <span class="pill neutral">${CONVENIO_LABEL[p.convenio]||p.convenio} · ${monthLabel(p.mes)}</span>
-          ${p.recebido ? '<span class="pill sage">recebido</span>' : '<span class="pill amber">aguardando</span>'}</div>
+        <div class="top">
+          <div style="display:flex; align-items:baseline; gap:10px; flex-wrap:wrap">
+            <span class="num">Protocolo ${p.numero}</span>
+            <span class="pill neutral">${CONVENIO_LABEL[p.convenio]||p.convenio} · ${monthLabel(p.mes)}</span>
+          </div>
+          ${p.recebido ? '<span class="pill sage">recebido</span>' : '<span class="pill amber">aguardando</span>'}
+        </div>
         <div class="proto-grid">
           <div><div class="k">Valor informado</div><div class="v">${p.valor_informado ? fmtBRL(p.valor_informado) : '—'}</div></div>
           <div><div class="k">Soma das linhas</div><div class="v">${fmtBRL(agg.somado)}</div></div>
