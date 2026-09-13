@@ -234,13 +234,12 @@ document.getElementById('btnSalvarLancamento').addEventListener('click', async (
 });
 refreshProcedimentoOptions();
 
-['filMedica','filConvenio','filMes','filDia'].forEach(id=>document.getElementById(id).addEventListener('change', renderLancamentos));
+['filData','filMedica','filConvenio'].forEach(id=>document.getElementById(id).addEventListener('change', renderLancamentos));
 document.getElementById('filPaciente').addEventListener('input', renderLancamentos);
 document.getElementById('btnLimparFiltros').addEventListener('click', ()=>{
+  document.getElementById('filData').value = '';
   document.getElementById('filMedica').value = '';
   document.getElementById('filConvenio').value = '';
-  document.getElementById('filMes').value = '';
-  document.getElementById('filDia').value = '';
   document.getElementById('filPaciente').value = '';
   renderLancamentos();
 });
@@ -255,16 +254,14 @@ function populateMonthOptions(select, keepFirst){
 }
 
 function renderLancamentos(){
-  populateMonthOptions(document.getElementById('filMes'), 'Todos');
+  const data = document.getElementById('filData').value;
   const medica = document.getElementById('filMedica').value;
   const convenio = document.getElementById('filConvenio').value;
-  const mes = document.getElementById('filMes').value;
-  const dia = document.getElementById('filDia').value;
   const busca = document.getElementById('filPaciente').value.trim().toLowerCase();
 
   let rows = state.atendimentos.filter(a=>
+    (!data || a.data===data) &&
     (!medica || a.medica===medica) && (!convenio || a.convenio===convenio) &&
-    (!mes || monthKey(a.data)===mes) && (!dia || Number(a.data.split('-')[2])===Number(dia)) &&
     (!busca || (a.paciente||'').toLowerCase().includes(busca))
   ).sort((a,b)=> b.data.localeCompare(a.data));
 
