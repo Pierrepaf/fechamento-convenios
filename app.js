@@ -833,7 +833,7 @@ function renderParametros(){
     return `<tr>
       <td>${CONVENIO_LABEL[p.convenio]||p.convenio}</td><td>${TIPO_LABEL[p.tipo_servico]||p.tipo_servico}</td>
       <td><input type="number" style="width:70px" data-atr="${key}" value="${p.atraso_meses ?? 0}"></td>
-      <td>${isUnimed ? '<span class="pill neutral">ver tabela abaixo</span>' : `<input type="number" style="width:70px" data-dia="${key}" value="${p.dia_pagamento ?? ''}">`}</td>
+      <td>${isUnimed ? '<span class="pill neutral">fixo: dia 15 / último dia do mês</span>' : `<input type="number" style="width:70px" data-dia="${key}" value="${p.dia_pagamento ?? ''}">`}</td>
       <td><button class="btn secondary" data-savepar="${key}">Salvar</button></td>
     </tr>`;
   }).join('');
