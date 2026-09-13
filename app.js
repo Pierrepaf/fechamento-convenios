@@ -333,6 +333,7 @@ function renderLancamentos(){
 // ---------------- Protocolos ----------------
 document.getElementById('protFiltroConvenio').addEventListener('change', renderProtocolos);
 document.getElementById('protFiltroMes').addEventListener('change', renderProtocolos);
+document.getElementById('protFiltroArquivados').addEventListener('change', renderProtocolos);
 
 function protoAggregates(protoId){
   const items = ativos().filter(a=>a.protocolo_id===protoId);
@@ -481,9 +482,10 @@ function renderProtocolos(){
 
   const convenioFiltro = document.getElementById('protFiltroConvenio').value;
   const mesFiltro = document.getElementById('protFiltroMes').value;
+  const mostrarArquivados = document.getElementById('protFiltroArquivados').checked;
 
   const protocolosFiltrados = state.protocolos
-    .filter(p=> (!convenioFiltro || p.convenio===convenioFiltro) && (!mesFiltro || p.mes===mesFiltro))
+    .filter(p=> (mostrarArquivados || !p.arquivado) && (!convenioFiltro || p.convenio===convenioFiltro) && (!mesFiltro || p.mes===mesFiltro))
     .sort((a,b)=> b.mes.localeCompare(a.mes) || a.convenio.localeCompare(b.convenio) || a.numero.localeCompare(b.numero));
 
   if(vinculacao) renderCheckListVinculacao();
@@ -498,11 +500,12 @@ function renderProtocolos(){
       const diffOk = Math.abs(diff) < 0.005 || !p.valor_informado;
       const expanded = expandedProtocolos.has(p.id);
       const itemsSorted = [...agg.items].sort((a,b)=> a.data.localeCompare(b.data));
-      return `<div class="proto-card">
+      return `<div class="proto-card" style="${p.arquivado?'opacity:.55':''}">
         <div class="top">
           <div style="display:flex; align-items:baseline; gap:10px; flex-wrap:wrap">
             <span class="num">Protocolo ${p.numero}</span>
             <span class="pill neutral">${CONVENIO_LABEL[p.convenio]||p.convenio} · ${monthLabel(p.mes)}</span>
+            ${p.arquivado ? '<span class="pill neutral">arquivado</span>' : ''}
           </div>
           ${p.recebido ? '<span class="pill sage">recebido</span>' : '<span class="pill amber">aguardando</span>'}
         </div>
@@ -516,7 +519,7 @@ function renderProtocolos(){
         </div>
         <div class="toolbar" style="margin-top:10px; margin-bottom:0">
           <button class="btn secondary" data-toggleitems="${p.id}">${expanded ? 'Ocultar' : 'Ver'} itens (${agg.items.length})</button>
-          <button class="btn secondary" data-vincular="${p.id}" data-convenio="${p.convenio}" data-mes="${p.mes}">Vincular itens</button>
+          ${p.arquivado ? '' : `<button class="btn secondary" data-vincular="${p.id}" data-convenio="${p.convenio}" data-mes="${p.mes}">Vincular itens</button>`}
         </div>
         <div class="table-wrap" ${expanded?'':'hidden'} data-itemswrap="${p.id}">
           <table>
@@ -531,6 +534,10 @@ function renderProtocolos(){
             </tr>`).join('')}</tbody>
           </table>
         </div>
+        ${p.arquivado ? `
+        <div class="proto-recv">
+          <button class="icon-btn" data-unarchp="${p.id}" title="Desarquivar">↺ desarquivar</button>
+        </div>` : `
         <div class="proto-recv">
           <div class="field"><label>Recebido?</label>
             <select data-recv="${p.id}"><option value="nao" ${!p.recebido?'selected':''}>Não</option><option value="sim" ${p.recebido?'selected':''}>Sim</option></select>
@@ -538,8 +545,8 @@ function renderProtocolos(){
           <div class="field"><label>Data recebida</label><input type="date" data-recdata="${p.id}" value="${p.data_recebida||''}"></div>
           <div class="field"><label>Valor recebido</label><input type="number" step="0.01" data-recval="${p.id}" value="${p.valor_recebido ?? ''}"></div>
           <button class="btn secondary" data-savep="${p.id}">Salvar</button>
-          <button class="icon-btn" data-delp="${p.id}" title="Excluir protocolo (desmarca os itens)">✕ excluir</button>
-        </div>
+          <button class="icon-btn" data-delp="${p.id}" title="Arquivar protocolo (desmarca os itens)">✕ arquivar</button>
+        </div>`}
       </div>`;
     }).join('');
 
@@ -549,6 +556,10 @@ function renderProtocolos(){
       renderProtocolos();
     }));
     listEl.querySelectorAll('[data-vincular]').forEach(btn=> btn.addEventListener('click', ()=> openVincular(btn.dataset.vincular, btn.dataset.convenio, btn.dataset.mes)));
+    listEl.querySelectorAll('[data-unarchp]').forEach(btn=> btn.addEventListener('click', async ()=>{
+      try{ await sbUpdate('protocolos', 'id', btn.dataset.unarchp, {arquivado:false}); }
+      catch(err){ alert('Não foi possível desarquivar (' + (err && err.message || 'erro') + '). Tente novamente.'); }
+    }));
     listEl.querySelectorAll('[data-savep]').forEach(btn=> btn.addEventListener('click', async ()=>{
       const id = btn.dataset.savep;
       const recebido = document.querySelector(`[data-recv="${id}"]`).value === 'sim';
@@ -568,13 +579,13 @@ function renderProtocolos(){
     }));
     listEl.querySelectorAll('[data-delp]').forEach(btn=> btn.addEventListener('click', async ()=>{
       const id = btn.dataset.delp;
-      if(!confirm('Excluir este protocolo? Os lançamentos ligados a ele voltam a ficar sem protocolo.')) return;
+      if(!confirm('Arquivar este protocolo? Os lançamentos ligados a ele voltam a ficar sem protocolo, e o protocolo some da lista, mas fica salvo (você pode desarquivar depois marcando "Mostrar arquivados").')) return;
       try{
         const items = state.atendimentos.filter(a=>a.protocolo_id===id);
         for(const it of items) await sbUpdate('atendimentos', 'id', it.id, {protocolo_id: null});
-        await sbDelete('protocolos', 'id', id);
+        await sbUpdate('protocolos', 'id', id, {arquivado:true});
       } catch(err){
-        alert('Não foi possível excluir (' + (err && err.message || 'erro') + '). Tente novamente.');
+        alert('Não foi possível arquivar (' + (err && err.message || 'erro') + '). Tente novamente.');
       }
     }));
   }
