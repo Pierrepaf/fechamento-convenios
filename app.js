@@ -24,7 +24,7 @@ let state = {
   atendimentos: [],  // {id, data, medica, convenio, tipo_servico, procedimento, paciente, valor, protocolo_id, arquivado}
   protocolos: [],    // {id, numero, convenio, mes, valor_informado, recebido, data_recebida, valor_recebido}
   parametros: {},    // chave -> {atraso_meses, dia_pagamento}
-  unimedPrazos: {},  // chave -> dia
+  unimedCortes: {},  // mes -> dia_corte (last day of that month's 1st quinzena; payment days themselves are fixed: 15 and last day of month)
   repasseMariana: 0.30,
 };
 
@@ -68,11 +68,11 @@ async function refreshParametros(){
   state.parametros = p;
   renderAll();
 }
-async function refreshUnimedPrazos(){
-  const rows = await sbSelect('unimed_prazos');
+async function refreshUnimedCortes(){
+  const rows = await sbSelect('unimed_cortes');
   const p = {};
-  rows.forEach(r => { p[r.chave] = r.dia; });
-  state.unimedPrazos = p;
+  rows.forEach(r => { p[r.mes] = Number(r.dia_corte); });
+  state.unimedCortes = p;
   renderAll();
 }
 async function refreshConfig(){
@@ -81,10 +81,16 @@ async function refreshConfig(){
   renderAll();
 }
 
+function corteDoMes(mesAt){
+  // Cutoff day splitting that month's 1st quinzena from its 2nd. Varies month to month (Lenice sets it
+  // in Parâmetros); defaults to 15 for any month not yet configured.
+  const c = state.unimedCortes[mesAt];
+  return c === undefined ? 15 : c;
+}
 function quinzenaOf(dataISO){
-  // Same 1-15 / 16-30 split the Unimed payment-date lookup (Parâmetros) uses — keep this the single
-  // source of truth so any UI that groups by quinzena stays consistent with the payment projection.
-  return Number(dataISO.split('-')[2]) <= 15 ? "1-15" : "16-30";
+  const [y,m,d] = dataISO.split('-').map(Number);
+  const corte = corteDoMes(`${y}-${pad2(m)}`);
+  return d <= corte ? "1-15" : "16-30";
 }
 function computeDataPagamento(at){
   const key = at.convenio + "_" + at.tipo_servico;
@@ -92,17 +98,16 @@ function computeDataPagamento(at){
   if(!param) return null;
   const [y,m] = at.data.split('-').map(Number);
   if(param.atraso_meses === 0) return at.data;
+  const targetKey = addMonths(`${y}-${pad2(m)}`, param.atraso_meses);
+  const [ty,tm] = targetKey.split('-').map(Number);
   let dia;
   if(at.convenio === "UNIMED"){
-    const periodo = quinzenaOf(at.data);
-    const mesAt = `${y}-${pad2(m)}`;
-    dia = state.unimedPrazos[mesAt + "_" + periodo];
-    if(dia === undefined) return null;
+    // Payment day is fixed, not configurable: 1st quinzena always pays on the 15th, 2nd quinzena
+    // always pays on the last day of the payment month. Only the quinzena cutoff itself varies.
+    dia = quinzenaOf(at.data) === "1-15" ? 15 : daysInMonth(ty,tm);
   } else {
     dia = param.dia_pagamento;
   }
-  const targetKey = addMonths(`${y}-${pad2(m)}`, param.atraso_meses);
-  const [ty,tm] = targetKey.split('-').map(Number);
   const finalDia = Math.min(dia, daysInMonth(ty,tm));
   return `${ty}-${pad2(tm)}-${pad2(finalDia)}`;
 }
@@ -112,7 +117,7 @@ async function init(){
   const statusDot = document.getElementById('statusDot');
   const statusText = document.getElementById('statusText');
   try{
-    await Promise.all([refreshAtendimentos(), refreshProtocolosData(), refreshParametros(), refreshUnimedPrazos(), refreshConfig()]);
+    await Promise.all([refreshAtendimentos(), refreshProtocolosData(), refreshParametros(), refreshUnimedCortes(), refreshConfig()]);
     statusDot.classList.remove('off');
     statusText.textContent = 'sincronizado';
   } catch(err){
@@ -124,7 +129,7 @@ async function init(){
   supabaseClient.channel('atendimentos-changes').on('postgres_changes', {event:'*', schema:'public', table:'atendimentos'}, refreshAtendimentos).subscribe();
   supabaseClient.channel('protocolos-changes').on('postgres_changes', {event:'*', schema:'public', table:'protocolos'}, refreshProtocolosData).subscribe();
   supabaseClient.channel('parametros-changes').on('postgres_changes', {event:'*', schema:'public', table:'parametros'}, refreshParametros).subscribe();
-  supabaseClient.channel('unimed-prazos-changes').on('postgres_changes', {event:'*', schema:'public', table:'unimed_prazos'}, refreshUnimedPrazos).subscribe();
+  supabaseClient.channel('unimed-cortes-changes').on('postgres_changes', {event:'*', schema:'public', table:'unimed_cortes'}, refreshUnimedCortes).subscribe();
   supabaseClient.channel('config-changes').on('postgres_changes', {event:'*', schema:'public', table:'config'}, refreshConfig).subscribe();
 }
 
@@ -377,9 +382,17 @@ function renderCheckListVinculacao(){
   const list = document.getElementById('protCheckList');
   const quinzenaWrap = document.getElementById('vincularQuinzenaWrap');
 
+  let corte, ultimoDia;
   if(convenio === 'UNIMED'){
     quinzenaWrap.hidden = false;
-    const quinzenaFiltro = document.getElementById('vincularQuinzena').value;
+    const [y,m] = mes.split('-').map(Number);
+    corte = corteDoMes(mes);
+    ultimoDia = daysInMonth(y,m);
+    const sel = document.getElementById('vincularQuinzena');
+    const current = sel.value;
+    sel.innerHTML = `<option value="">Todas</option><option value="1-15">Dia 1–${corte}</option><option value="16-30">Dia ${corte+1}–${ultimoDia}</option>`;
+    if(current === '1-15' || current === '16-30') sel.value = current;
+    const quinzenaFiltro = sel.value;
     if(quinzenaFiltro) pendentes = pendentes.filter(a=> quinzenaOf(a.data) === quinzenaFiltro);
   } else {
     quinzenaWrap.hidden = true;
@@ -391,8 +404,8 @@ function renderCheckListVinculacao(){
     const primeira = pendentes.filter(a=> quinzenaOf(a.data)==='1-15');
     const segunda = pendentes.filter(a=> quinzenaOf(a.data)==='16-30');
     list.innerHTML =
-      (primeira.length ? `<div class="filter-label" style="margin:4px 0">Quinzena 1-15 (${primeira.length})</div>${primeira.map(checklistRowHtml).join('')}` : '') +
-      (segunda.length ? `<div class="filter-label" style="margin:8px 0 4px">Quinzena 16-30 (${segunda.length})</div>${segunda.map(checklistRowHtml).join('')}` : '');
+      (primeira.length ? `<div class="filter-label" style="margin:4px 0">Dia 1–${corte} (${primeira.length})</div>${primeira.map(checklistRowHtml).join('')}` : '') +
+      (segunda.length ? `<div class="filter-label" style="margin:8px 0 4px">Dia ${corte+1}–${ultimoDia} (${segunda.length})</div>${segunda.map(checklistRowHtml).join('')}` : '');
   } else {
     list.innerHTML = pendentes.map(checklistRowHtml).join('');
   }
@@ -773,7 +786,7 @@ function renderRelatorio(){
     <div class="kpi"><div class="label">Mariana recebe (líquido) — ${monthLabel(mesAtual.mes)}</div><div class="value num">${fmtBRL(marianaLiqTotal)}</div></div>
   `;
 
-  const pend = state.protocolos.filter(p=>!p.recebido).map(p=>({...p, ...protoAggregates(p.id)}))
+  const pend = state.protocolos.filter(p=>!p.recebido && !p.arquivado).map(p=>({...p, ...protoAggregates(p.id)}))
     .sort((a,b)=> (a.dataPagamento||'9999').localeCompare(b.dataPagamento||'9999'));
   document.getElementById('tituloPendentes').textContent = `Protocolos pendentes de conferência${pend.length ? ' (' + pend.length + ')' : ''}`;
   const tbody = document.getElementById('tblPendentes');
@@ -838,21 +851,24 @@ function renderParametros(){
   }));
 
   const utbody = document.getElementById('tblUnimedPrazos');
-  const ukeys = Object.keys(state.unimedPrazos).sort();
-  utbody.innerHTML = ukeys.map(key=>{
-    const [mes, periodo] = key.split('_');
+  const umeses = Object.keys(state.unimedCortes).sort();
+  utbody.innerHTML = umeses.map(mes=>{
+    const corte = state.unimedCortes[mes];
+    const [y,m] = mes.split('-').map(Number);
+    const ultimoDia = daysInMonth(y,m);
     return `<tr>
-      <td>${monthLabel(mes)}</td><td>${periodo}</td>
-      <td><input type="number" style="width:70px" data-udia="${key}" value="${state.unimedPrazos[key]}"></td>
-      <td><button class="btn secondary" data-saveu="${key}">Salvar</button></td>
+      <td>${monthLabel(mes)}</td>
+      <td><input type="number" style="width:70px" min="1" max="${ultimoDia}" data-corte="${mes}" value="${corte}"></td>
+      <td class="hint" style="margin:0">1ª: dia 1–${corte} (paga dia 15) · 2ª: dia ${corte+1}–${ultimoDia} (paga no último dia do mês)</td>
+      <td><button class="btn secondary" data-saveu="${mes}">Salvar</button></td>
     </tr>`;
   }).join('');
   utbody.querySelectorAll('[data-saveu]').forEach(btn=> btn.addEventListener('click', async ()=>{
-    const key = btn.dataset.saveu;
-    const dia = parseInt(document.querySelector(`[data-udia="${key}"]`).value,10);
-    if(!dia) return;
+    const mes = btn.dataset.saveu;
+    const corte = parseInt(document.querySelector(`[data-corte="${mes}"]`).value,10);
+    if(!corte || corte<1 || corte>31) return;
     try{
-      await sbUpdate('unimed_prazos', 'chave', key, {dia});
+      await sbUpdate('unimed_cortes', 'mes', mes, {dia_corte: corte});
       btn.textContent = 'Salvo ✓'; setTimeout(()=>btn.textContent='Salvar', 1200);
     } catch(err){
       alert('Não foi possível salvar (' + (err && err.message || 'erro') + '). Tente novamente.');
