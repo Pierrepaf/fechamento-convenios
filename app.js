@@ -130,8 +130,9 @@ function refreshProcedimentoOptions(){
   const tipo = document.getElementById('fTipo').value;
   const sel = document.getElementById('fProcedimento');
   const prev = sel.value;
+  document.getElementById('fProcedimentoWrap').hidden = (tipo === 'CONSULTA');
   if(tipo === 'CONSULTA'){
-    sel.innerHTML = `<option value="CONSULTA">Consulta</option>`;
+    sel.innerHTML = '';
     sel.disabled = true;
   } else if(tipo === 'EXAME'){
     sel.disabled = false;
