@@ -401,7 +401,12 @@ document.getElementById('btnSelNenhum').addEventListener('click', ()=>{
 function openVincular(protocoloId, convenio, mes){
   vinculacao = { protocoloId, convenio, mes };
   const p = state.protocolos.find(x=>x.id===protocoloId);
-  document.getElementById('vincularTitulo').textContent = p ? `Escolher atendimentos — Protocolo ${p.numero} (${CONVENIO_LABEL[convenio]} · ${monthLabel(mes)})` : 'Escolher atendimentos';
+  document.getElementById('vincularInfo').innerHTML = p ? `
+    <div><div class="k">Protocolo</div><div class="v">${p.numero}</div></div>
+    <div><div class="k">Convênio</div><div class="v">${CONVENIO_LABEL[convenio]||convenio}</div></div>
+    <div><div class="k">Mês</div><div class="v">${monthLabel(mes)}</div></div>
+    <div><div class="k">Valor informado</div><div class="v">${p.valor_informado ? fmtBRL(p.valor_informado) : '—'}</div></div>
+  ` : '';
   document.getElementById('formNovoProtocolo').hidden = true;
   document.getElementById('formVincularItens').hidden = false;
   renderCheckListVinculacao();
