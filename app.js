@@ -279,7 +279,7 @@ function renderLancamentos(){
     (!data || a.data===data) &&
     (!medica || a.medica===medica) && (!convenio || a.convenio===convenio) &&
     (!busca || (a.paciente||'').toLowerCase().includes(busca))
-  ).sort((a,b)=> b.data.localeCompare(a.data));
+  ).sort((a,b)=> b.data.localeCompare(a.data) || (b.created_at||'').localeCompare(a.created_at||''));
 
   document.getElementById('filCount').textContent = rows.length + ' itens';
   const tbody = document.getElementById('tblLancamentos');
