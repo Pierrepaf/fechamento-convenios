@@ -81,15 +81,20 @@ async function refreshConfig(){
   renderAll();
 }
 
+function quinzenaOf(dataISO){
+  // Same 1-15 / 16-30 split the Unimed payment-date lookup (Parâmetros) uses — keep this the single
+  // source of truth so any UI that groups by quinzena stays consistent with the payment projection.
+  return Number(dataISO.split('-')[2]) <= 15 ? "1-15" : "16-30";
+}
 function computeDataPagamento(at){
   const key = at.convenio + "_" + at.tipo_servico;
   const param = state.parametros[key];
   if(!param) return null;
-  const [y,m,d] = at.data.split('-').map(Number);
+  const [y,m] = at.data.split('-').map(Number);
   if(param.atraso_meses === 0) return at.data;
   let dia;
   if(at.convenio === "UNIMED"){
-    const periodo = d <= 15 ? "1-15" : "16-30";
+    const periodo = quinzenaOf(at.data);
     const mesAt = `${y}-${pad2(m)}`;
     dia = state.unimedPrazos[mesAt + "_" + periodo];
     if(dia === undefined) return null;
@@ -363,15 +368,27 @@ function checklistRowHtml(a){
       </label>`;
 }
 
+document.getElementById('vincularQuinzena').addEventListener('change', renderCheckListVinculacao);
+
 function renderCheckListVinculacao(){
   const { convenio, mes } = vinculacao;
-  const pendentes = pendentesDoGrupo(convenio, mes);
+  let pendentes = pendentesDoGrupo(convenio, mes);
   const list = document.getElementById('protCheckList');
+  const quinzenaWrap = document.getElementById('vincularQuinzenaWrap');
+
+  if(convenio === 'UNIMED'){
+    quinzenaWrap.hidden = false;
+    const quinzenaFiltro = document.getElementById('vincularQuinzena').value;
+    if(quinzenaFiltro) pendentes = pendentes.filter(a=> quinzenaOf(a.data) === quinzenaFiltro);
+  } else {
+    quinzenaWrap.hidden = true;
+  }
+
   if(pendentes.length===0){
     list.innerHTML = `<div class="empty">Nada pendente — todos os itens já têm protocolo.</div>`;
   } else if(convenio === 'UNIMED'){
-    const primeira = pendentes.filter(a=> Number(a.data.split('-')[2]) <= 15);
-    const segunda = pendentes.filter(a=> Number(a.data.split('-')[2]) > 15);
+    const primeira = pendentes.filter(a=> quinzenaOf(a.data)==='1-15');
+    const segunda = pendentes.filter(a=> quinzenaOf(a.data)==='16-30');
     list.innerHTML =
       (primeira.length ? `<div class="filter-label" style="margin:4px 0">Quinzena 1-15 (${primeira.length})</div>${primeira.map(checklistRowHtml).join('')}` : '') +
       (segunda.length ? `<div class="filter-label" style="margin:8px 0 4px">Quinzena 16-30 (${segunda.length})</div>${segunda.map(checklistRowHtml).join('')}` : '');
@@ -402,6 +419,7 @@ document.getElementById('btnSelNenhum').addEventListener('click', ()=>{
 
 function openVincular(protocoloId, convenio, mes){
   vinculacao = { protocoloId, convenio, mes };
+  document.getElementById('vincularQuinzena').value = '';
   const p = state.protocolos.find(x=>x.id===protocoloId);
   document.getElementById('vincularInfo').innerHTML = p ? `
     <div><div class="k">Convênio</div><div class="v">${CONVENIO_LABEL[convenio]||convenio}</div></div>
@@ -495,8 +513,8 @@ function renderProtocolos(){
   );
   const semProtocoloValor = semProtocolo.reduce((s,a)=>s+a.valor,0);
   document.getElementById('protSemProtocoloBanner').innerHTML = semProtocolo.length===0
-    ? `<div class="banner sage">✓ Nenhum atendimento sem protocolo</div>`
-    : `<div class="banner amber">${semProtocolo.length} atendimento(s) sem protocolo — ${fmtBRL(semProtocoloValor)}</div>`;
+    ? `<div class="banner sage">✓ Nenhum lançamento sem protocolo</div>`
+    : `<div class="banner amber">${semProtocolo.length} lançamento(s) sem protocolo — ${fmtBRL(semProtocoloValor)}</div>`;
 
   if(vinculacao) renderCheckListVinculacao();
 
@@ -532,8 +550,8 @@ function renderProtocolos(){
           <div><div class="k">Pagamento esperado</div><div class="v">${agg.dataPagamento ? agg.dataPagamento.split('-').reverse().join('/') : '—'}</div></div>
         </div>
         <div class="toolbar" style="margin-top:10px; margin-bottom:0">
-          <button class="btn secondary" data-toggleitems="${p.id}">${expanded ? 'Ocultar' : 'Ver'} atendimentos (${agg.items.length})</button>
-          ${p.arquivado ? '' : `<button class="btn secondary" data-vincular="${p.id}" data-convenio="${p.convenio}" data-mes="${p.mes}">Vincular atendimentos</button>`}
+          <button class="btn secondary" data-toggleitems="${p.id}">${expanded ? 'Ocultar' : 'Ver'} lançamentos (${agg.items.length})</button>
+          ${p.arquivado ? '' : `<button class="btn secondary" data-vincular="${p.id}" data-convenio="${p.convenio}" data-mes="${p.mes}">Vincular lançamentos</button>`}
         </div>
         <div class="table-wrap" ${expanded?'':'hidden'} data-itemswrap="${p.id}">
           <table>
@@ -553,6 +571,8 @@ function renderProtocolos(){
           <button class="icon-btn" data-unarchp="${p.id}" title="Desarquivar">↺ desarquivar</button>
         </div>` : `
         <div class="proto-recv">
+          <div class="field"><label>Número do protocolo</label><input type="text" data-numero="${p.id}" value="${p.numero}"></div>
+          <div class="field"><label>Valor informado</label><input type="number" step="0.01" class="protoValorInf" data-valorinf="${p.id}" value="${p.valor_informado ?? ''}"></div>
           <div class="field"><label>Recebido?</label>
             <select data-recv="${p.id}"><option value="nao" ${!p.recebido?'selected':''}>Não</option><option value="sim" ${p.recebido?'selected':''}>Sim</option></select>
           </div>
@@ -574,15 +594,20 @@ function renderProtocolos(){
       try{ await sbUpdate('protocolos', 'id', btn.dataset.unarchp, {arquivado:false}); }
       catch(err){ alert('Não foi possível desarquivar (' + (err && err.message || 'erro') + '). Tente novamente.'); }
     }));
+    listEl.querySelectorAll('[data-valorinf]').forEach(inp=> blockNonNumeric(inp));
     listEl.querySelectorAll('[data-savep]').forEach(btn=> btn.addEventListener('click', async ()=>{
       const id = btn.dataset.savep;
+      const numero = document.querySelector(`[data-numero="${id}"]`).value.trim();
+      const valorInformado = parseFloat(document.querySelector(`[data-valorinf="${id}"]`).value);
       const recebido = document.querySelector(`[data-recv="${id}"]`).value === 'sim';
       const dataRecebida = document.querySelector(`[data-recdata="${id}"]`).value;
       const valorRecebido = parseFloat(document.querySelector(`[data-recval="${id}"]`).value);
+      if(!numero || isNaN(valorInformado)){ alert('Número do protocolo e valor informado são obrigatórios.'); return; }
       const originalText = btn.textContent;
       btn.disabled = true; btn.textContent = 'Salvando…';
       try{
         await sbUpdate('protocolos', 'id', id, {
+          numero, valor_informado: valorInformado,
           recebido, data_recebida: dataRecebida||null, valor_recebido: isNaN(valorRecebido)?null:valorRecebido
         });
       } catch(err){
@@ -681,7 +706,7 @@ function renderRelatorio(){
   const semProtocolo = computeSemProtocolo();
   const semProtocoloTotal = semProtocolo.reduce((s,g)=>s+g.valor,0);
   document.getElementById('tituloSemProtocolo').textContent =
-    `Atendimentos sem protocolo${semProtocolo.length ? ' — ' + fmtBRL(semProtocoloTotal) : ''}`;
+    `Lançamentos sem protocolo${semProtocolo.length ? ' — ' + fmtBRL(semProtocoloTotal) : ''}`;
   const tblSem = document.getElementById('tblSemProtocolo');
   tblSem.innerHTML = semProtocolo.length===0
     ? `<tr><td colspan="5" class="empty">Nada esquecido — tudo que já passou do mês já está em algum protocolo.</td></tr>`

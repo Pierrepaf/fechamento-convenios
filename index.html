@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Fechamento Convênios</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="styles.css?v=20260913q">
+<link rel="stylesheet" href="styles.css?v=20260913r">
 </head>
 <body>
 
@@ -138,7 +138,7 @@
             <h2>Novo protocolo</h2>
             <button class="icon-btn" id="btnFecharNovoProtocolo" title="Fechar" aria-label="Fechar" style="font-size:18px; line-height:1">✕</button>
           </div>
-          <p class="hint">Primeiro registrem o convênio, o mês, o número e o valor que o convênio informou. Depois vocês escolhem quais atendimentos entram nele.</p>
+          <p class="hint">Primeiro registrem o convênio, o mês, o número e o valor que o convênio informou. Depois vocês escolhem quais lançamentos entram nele.</p>
           <div class="toolbar" style="margin-top:12px; align-items:flex-end">
             <div class="field"><label>Convênio</label>
               <select id="protNovoConvenio">
@@ -159,11 +159,20 @@
       <div class="card" id="formVincularItens" hidden>
         <div class="card-pad">
           <div style="display:flex; justify-content:space-between; align-items:baseline; gap:12px">
-            <h2>Escolher atendimentos</h2>
+            <h2>Escolher lançamentos</h2>
             <button class="icon-btn" id="btnFecharVincular" title="Fechar" aria-label="Fechar" style="font-size:18px; line-height:1">✕</button>
           </div>
           <div class="proto-grid" id="vincularInfo" style="margin:10px 0"></div>
           <p class="hint">Marquem todos os que o convênio agrupou neste protocolo. Use os atalhos para marcar tudo de um tipo e depois desmarquem as exceções.</p>
+          <div class="toolbar" id="vincularQuinzenaWrap" style="margin:2px 0" hidden>
+            <div class="field"><label>Quinzena</label>
+              <select id="vincularQuinzena">
+                <option value="">Todas</option>
+                <option value="1-15">1-15</option>
+                <option value="16-30">16-30</option>
+              </select>
+            </div>
+          </div>
           <div class="toolbar" style="margin:6px 0 2px">
             <button class="btn secondary" id="btnSelTodasConsultas">Marcar todas as consultas</button>
             <button class="btn secondary" id="btnSelTodosExames">Marcar todos os exames</button>
@@ -199,7 +208,7 @@
       <div class="acao-grid">
         <div class="card">
           <div class="card-pad">
-            <h2 id="tituloSemProtocolo">Atendimentos sem protocolo</h2>
+            <h2 id="tituloSemProtocolo">Lançamentos sem protocolo</h2>
             <p class="hint">Trabalho de meses já fechados que ainda não foi enviado a nenhum convênio (Particular não conta - não passa por protocolo).</p>
             <div class="table-wrap"><table>
               <thead><tr><th>Convênio</th><th>Mês</th><th class="right">Qtde</th><th class="right">Valor</th><th></th></tr></thead>
@@ -317,7 +326,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=20260913q"></script>
-<script src="app.js?v=20260913q"></script>
+<script src="config.js?v=20260913r"></script>
+<script src="app.js?v=20260913r"></script>
 </body>
 </html>
