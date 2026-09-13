@@ -170,6 +170,10 @@ document.getElementById('btnCancelarLancamento').addEventListener('click', ()=>{
   document.getElementById('formNovoLancamento').hidden = true;
   editingId = null;
 });
+document.getElementById('btnFecharLancamento').addEventListener('click', ()=>{
+  document.getElementById('formNovoLancamento').hidden = true;
+  editingId = null;
+});
 
 function abrirEdicao(id){
   const a = state.atendimentos.find(x=>x.id===id);

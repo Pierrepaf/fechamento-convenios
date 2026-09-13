@@ -38,7 +38,10 @@
 
       <div class="card" id="formNovoLancamento" hidden>
         <div class="card-pad">
-          <h2 id="formTitulo">Novo lançamento</h2>
+          <div style="display:flex; justify-content:space-between; align-items:baseline; gap:12px">
+            <h2 id="formTitulo">Novo lançamento</h2>
+            <button class="icon-btn" id="btnFecharLancamento" title="Fechar" aria-label="Fechar" style="font-size:18px; line-height:1">✕</button>
+          </div>
           <div class="toolbar" style="margin-top:12px">
             <div class="field"><label>Data</label><input type="date" id="fData"></div>
             <div class="field"><label>Médica</label>
