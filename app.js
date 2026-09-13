@@ -780,36 +780,34 @@ function renderRelatorio(){
   const kpis = document.getElementById('kpis');
   const mesAtual = geral[0], mesProximo = geral[1];
   const pct = Math.round(state.repasseMariana*100);
-  const repasseThis = marianaBruto[0].total * state.repasseMariana;
-  const repasseNext = marianaBruto[1].total * state.repasseMariana;
-  const liquidoThis = marianaBruto[0].total - repasseThis;
-  const liquidoNext = marianaBruto[1].total - repasseNext;
-  kpis.innerHTML = `
+  const marianaThis = marianaBruto[0].total, marianaNext = marianaBruto[1].total;
+  const repasse2m = (marianaThis + marianaNext) * state.repasseMariana;
+  const leniceThis = lenice[0].total, leniceNext = lenice[1].total;
+  const leniceTotal = leniceThis + leniceNext + repasse2m;
+  const marianaTotal = marianaThis + marianaNext - repasse2m;
+  const kpiCard = (nome, total, rows) => `
     <div class="card">
       <div class="card-pad">
-        <h2>Lenice</h2>
-        <p class="hint">O que ela ainda vai receber dos convênios, com base no que já foi lançado.</p>
-        <div class="proto-grid">
-          <div><div class="k">Este mês — ${monthLabel(mesAtual.mes)}</div><div class="v num" style="font-size:20px; font-weight:600">${fmtBRL(lenice[0].total)}</div></div>
-          <div><div class="k">Próximo mês — ${monthLabel(mesProximo.mes)}</div><div class="v num" style="font-size:20px; font-weight:600">${fmtBRL(lenice[1].total)}</div></div>
+        <h2>${nome}</h2>
+        <div class="value num" style="font-size:30px; font-weight:700; line-height:1.15; margin-top:6px">${fmtBRL(total)}</div>
+        <div style="display:flex; flex-direction:column; gap:7px; margin-top:14px; padding-top:12px; border-top:1px solid var(--border)">
+          ${rows.map(r=>`<div style="display:flex; justify-content:space-between; gap:12px">
+            <span style="color:var(--ink-soft)">${r.label}</span><span class="num ${r.cls||''}">${r.val}</span>
+          </div>`).join('')}
         </div>
       </div>
-    </div>
-    <div class="card">
-      <div class="card-pad">
-        <h2>Mariana</h2>
-        <p class="hint">Bruto dos convênios, o repasse de ${pct}% para a clínica, e o líquido que fica com ela.</p>
-        <div class="proto-grid">
-          <div><div class="k">Bruto — este mês</div><div class="v num">${fmtBRL(marianaBruto[0].total)}</div></div>
-          <div><div class="k">Bruto — próximo mês</div><div class="v num">${fmtBRL(marianaBruto[1].total)}</div></div>
-          <div><div class="k">Repasse (${pct}%) — este mês</div><div class="v num diff-bad">-${fmtBRL(repasseThis)}</div></div>
-          <div><div class="k">Repasse (${pct}%) — próximo mês</div><div class="v num diff-bad">-${fmtBRL(repasseNext)}</div></div>
-          <div><div class="k">Líquido — este mês</div><div class="v num" style="font-size:20px; font-weight:600">${fmtBRL(liquidoThis)}</div></div>
-          <div><div class="k">Líquido — próximo mês</div><div class="v num" style="font-size:20px; font-weight:600">${fmtBRL(liquidoNext)}</div></div>
-        </div>
-      </div>
-    </div>
-  `;
+    </div>`;
+  kpis.innerHTML =
+    kpiCard('Lenice', leniceTotal, [
+      {label: monthLabel(mesAtual.mes), val: fmtBRL(leniceThis)},
+      {label: monthLabel(mesProximo.mes), val: fmtBRL(leniceNext)},
+      {label: `${pct}% de Mariana`, val: fmtBRL(repasse2m)},
+    ]) +
+    kpiCard('Mariana', marianaTotal, [
+      {label: monthLabel(mesAtual.mes), val: fmtBRL(marianaThis)},
+      {label: monthLabel(mesProximo.mes), val: fmtBRL(marianaNext)},
+      {label: `Repasse (${pct}%)`, val: '-'+fmtBRL(repasse2m), cls: 'diff-bad'},
+    ]);
 
   const pend = state.protocolos.filter(p=>!p.recebido && !p.arquivado).map(p=>({...p, ...protoAggregates(p.id)}))
     .sort((a,b)=> (a.dataPagamento||'9999').localeCompare(b.dataPagamento||'9999'));
