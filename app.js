@@ -214,7 +214,7 @@ async function salvarLancamento(btn, keepOpenForNext){
   const valor = parseFloat(document.getElementById('fValor').value);
   const paciente = document.getElementById('fPaciente').value.trim();
   if(!data || !medica || !convenio || !tipo || isNaN(valor) || !paciente){ alert('Preencha todos os campos: data, médica, convênio, tipo, paciente e valor.'); return; }
-  let procedimento = document.getElementById('fProcedimento').value;
+  let procedimento = tipo === 'CONSULTA' ? '' : document.getElementById('fProcedimento').value;
   if(procedimento === '__outro') procedimento = document.getElementById('fProcedimentoOutro').value.trim() || 'EXAME';
   const doc = { data, medica, convenio, tipo_servico: tipo, procedimento, paciente, valor };
   const originalText = btn.textContent;
