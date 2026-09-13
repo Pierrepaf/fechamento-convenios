@@ -133,10 +133,13 @@ function refreshProcedimentoOptions(){
   if(tipo === 'CONSULTA'){
     sel.innerHTML = `<option value="CONSULTA">Consulta</option>`;
     sel.disabled = true;
-  } else {
+  } else if(tipo === 'EXAME'){
     sel.disabled = false;
     sel.innerHTML = PROCEDIMENTOS_EXAME.map(p=>`<option value="${p}">${p}</option>`).join('') + `<option value="__outro">Outro…</option>`;
     if(PROCEDIMENTOS_EXAME.includes(prev) || prev==='__outro') sel.value = prev;
+  } else {
+    sel.innerHTML = `<option value="">Selecione o tipo primeiro</option>`;
+    sel.disabled = true;
   }
   toggleProcedimentoOutro();
 }
@@ -152,9 +155,9 @@ function resetForm(){
   document.getElementById('formTitulo').textContent = 'Novo lançamento';
   document.getElementById('btnSalvarLancamento').textContent = 'Salvar';
   document.getElementById('fData').value = todayISO();
-  document.getElementById('fMedica').value = 'LENICE';
-  document.getElementById('fConvenio').value = 'AMIL';
-  document.getElementById('fTipo').value = 'CONSULTA';
+  document.getElementById('fMedica').value = '';
+  document.getElementById('fConvenio').value = '';
+  document.getElementById('fTipo').value = '';
   refreshProcedimentoOptions();
   document.getElementById('fProcedimentoOutro').value = '';
   document.getElementById('fPaciente').value = '';
@@ -203,16 +206,15 @@ function abrirEdicao(id){
 
 document.getElementById('btnSalvarLancamento').addEventListener('click', async ()=>{
   const data = document.getElementById('fData').value;
+  const medica = document.getElementById('fMedica').value;
+  const convenio = document.getElementById('fConvenio').value;
+  const tipo = document.getElementById('fTipo').value;
   const valor = parseFloat(document.getElementById('fValor').value);
   const paciente = document.getElementById('fPaciente').value.trim();
-  if(!data || isNaN(valor) || !paciente){ alert('Preencha data, paciente e valor.'); return; }
-  const tipo = document.getElementById('fTipo').value;
+  if(!data || !medica || !convenio || !tipo || isNaN(valor) || !paciente){ alert('Preencha todos os campos: data, médica, convênio, tipo, paciente e valor.'); return; }
   let procedimento = document.getElementById('fProcedimento').value;
   if(procedimento === '__outro') procedimento = document.getElementById('fProcedimentoOutro').value.trim() || 'EXAME';
-  const doc = {
-    data, medica: document.getElementById('fMedica').value, convenio: document.getElementById('fConvenio').value,
-    tipo_servico: tipo, procedimento, paciente, valor
-  };
+  const doc = { data, medica, convenio, tipo_servico: tipo, procedimento, paciente, valor };
   const btn = document.getElementById('btnSalvarLancamento');
   const originalText = btn.textContent;
   btn.disabled = true; btn.textContent = 'Salvando…';
