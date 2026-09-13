@@ -352,6 +352,7 @@ function protoAggregates(protoId){
 
 let expandedProtocolos = new Set();
 let vinculacao = null; // {protocoloId, convenio, mes}
+let editingProtocolo = null; // id of the protocolo whose número/valor informado is being edited
 
 function pendentesDoGrupo(convenio, mes){
   return ativos().filter(a=>a.convenio===convenio && monthKey(a.data)===mes && !a.protocolo_id)
@@ -530,6 +531,7 @@ function renderProtocolos(){
       const diffPagamentoOk = diffPagamento===null || Math.abs(diffPagamento) < 0.005;
       const expanded = expandedProtocolos.has(p.id);
       const itemsSorted = [...agg.items].sort((a,b)=> a.data.localeCompare(b.data));
+      const isEditing = editingProtocolo === p.id;
       return `<div class="proto-card" style="${p.arquivado?'opacity:.55':''}">
         <div class="top">
           <div style="display:flex; flex-direction:column; align-items:flex-start; gap:6px">
@@ -539,8 +541,18 @@ function renderProtocolos(){
               ${p.arquivado ? '<span class="pill neutral">arquivado</span>' : ''}
             </div>
           </div>
-          ${p.recebido ? '<span class="pill sage">recebido</span>' : '<span class="pill amber">aguardando</span>'}
+          <div style="display:flex; align-items:center; gap:8px">
+            ${p.arquivado ? '' : `<button class="icon-btn" data-editp="${p.id}" title="Editar número/valor informado">✎</button>`}
+            ${p.recebido ? '<span class="pill sage">recebido</span>' : '<span class="pill amber">aguardando</span>'}
+          </div>
         </div>
+        ${isEditing ? `
+        <div class="toolbar" style="margin-top:10px; align-items:flex-end">
+          <div class="field"><label>Número do protocolo</label><input type="text" id="editNumero_${p.id}" value="${p.numero}"></div>
+          <div class="field"><label>Valor informado</label><input type="number" step="0.01" class="protoValorInf" id="editValorInf_${p.id}" value="${p.valor_informado ?? ''}"></div>
+          <button class="btn" data-saveeditp="${p.id}">Salvar</button>
+          <button class="btn secondary" data-canceleditp="${p.id}">Cancelar</button>
+        </div>` : ''}
         <div class="proto-grid">
           <div><div class="k">Trabalho</div><div class="v">${fmtBRL(agg.somado)}</div></div>
           <div><div class="k">Informado</div><div class="v">${p.valor_informado ? fmtBRL(p.valor_informado) : '—'}</div></div>
@@ -571,8 +583,6 @@ function renderProtocolos(){
           <button class="icon-btn" data-unarchp="${p.id}" title="Desarquivar">↺ desarquivar</button>
         </div>` : `
         <div class="proto-recv">
-          <div class="field"><label>Número do protocolo</label><input type="text" data-numero="${p.id}" value="${p.numero}"></div>
-          <div class="field"><label>Valor informado</label><input type="number" step="0.01" class="protoValorInf" data-valorinf="${p.id}" value="${p.valor_informado ?? ''}"></div>
           <div class="field"><label>Recebido?</label>
             <select data-recv="${p.id}"><option value="nao" ${!p.recebido?'selected':''}>Não</option><option value="sim" ${p.recebido?'selected':''}>Sim</option></select>
           </div>
@@ -594,20 +604,40 @@ function renderProtocolos(){
       try{ await sbUpdate('protocolos', 'id', btn.dataset.unarchp, {arquivado:false}); }
       catch(err){ alert('Não foi possível desarquivar (' + (err && err.message || 'erro') + '). Tente novamente.'); }
     }));
-    listEl.querySelectorAll('[data-valorinf]').forEach(inp=> blockNonNumeric(inp));
-    listEl.querySelectorAll('[data-savep]').forEach(btn=> btn.addEventListener('click', async ()=>{
-      const id = btn.dataset.savep;
-      const numero = document.querySelector(`[data-numero="${id}"]`).value.trim();
-      const valorInformado = parseFloat(document.querySelector(`[data-valorinf="${id}"]`).value);
-      const recebido = document.querySelector(`[data-recv="${id}"]`).value === 'sim';
-      const dataRecebida = document.querySelector(`[data-recdata="${id}"]`).value;
-      const valorRecebido = parseFloat(document.querySelector(`[data-recval="${id}"]`).value);
+    listEl.querySelectorAll('.protoValorInf').forEach(inp=> blockNonNumeric(inp));
+    listEl.querySelectorAll('[data-editp]').forEach(btn=> btn.addEventListener('click', ()=>{
+      editingProtocolo = btn.dataset.editp;
+      renderProtocolos();
+    }));
+    listEl.querySelectorAll('[data-canceleditp]').forEach(btn=> btn.addEventListener('click', ()=>{
+      editingProtocolo = null;
+      renderProtocolos();
+    }));
+    listEl.querySelectorAll('[data-saveeditp]').forEach(btn=> btn.addEventListener('click', async ()=>{
+      const id = btn.dataset.saveeditp;
+      const numero = document.getElementById(`editNumero_${id}`).value.trim();
+      const valorInformado = parseFloat(document.getElementById(`editValorInf_${id}`).value);
       if(!numero || isNaN(valorInformado)){ alert('Número do protocolo e valor informado são obrigatórios.'); return; }
       const originalText = btn.textContent;
       btn.disabled = true; btn.textContent = 'Salvando…';
       try{
+        await sbUpdate('protocolos', 'id', id, { numero, valor_informado: valorInformado });
+        editingProtocolo = null;
+      } catch(err){
+        alert('Não foi possível salvar (' + (err && err.message || 'erro') + '). Tente novamente.');
+      } finally {
+        btn.disabled = false; btn.textContent = originalText;
+      }
+    }));
+    listEl.querySelectorAll('[data-savep]').forEach(btn=> btn.addEventListener('click', async ()=>{
+      const id = btn.dataset.savep;
+      const recebido = document.querySelector(`[data-recv="${id}"]`).value === 'sim';
+      const dataRecebida = document.querySelector(`[data-recdata="${id}"]`).value;
+      const valorRecebido = parseFloat(document.querySelector(`[data-recval="${id}"]`).value);
+      const originalText = btn.textContent;
+      btn.disabled = true; btn.textContent = 'Salvando…';
+      try{
         await sbUpdate('protocolos', 'id', id, {
-          numero, valor_informado: valorInformado,
           recebido, data_recebida: dataRecebida||null, valor_recebido: isNaN(valorRecebido)?null:valorRecebido
         });
       } catch(err){
