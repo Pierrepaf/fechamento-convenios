@@ -781,10 +781,14 @@ function renderRelatorio(){
   const mesAtual = geral[0], mesProximo = geral[1];
   const pct = Math.round(state.repasseMariana*100);
   const marianaThis = marianaBruto[0].total, marianaNext = marianaBruto[1].total;
-  const repasse2m = (marianaThis + marianaNext) * state.repasseMariana;
+  const repasseThis = marianaThis * state.repasseMariana;
+  const repasseNext = marianaNext * state.repasseMariana;
+  const repasse2m = repasseThis + repasseNext;
+  const marianaLiquidoThis = marianaThis - repasseThis;
+  const marianaLiquidoNext = marianaNext - repasseNext;
   const leniceThis = lenice[0].total, leniceNext = lenice[1].total;
   const leniceTotal = leniceThis + leniceNext + repasse2m;
-  const marianaTotal = marianaThis + marianaNext - repasse2m;
+  const marianaTotal = marianaLiquidoThis + marianaLiquidoNext;
   const kpiCard = (nome, total, rows) => `
     <div class="card">
       <div class="card-pad">
@@ -804,8 +808,8 @@ function renderRelatorio(){
       {label: `${pct}% de Mariana`, val: fmtBRL(repasse2m)},
     ]) +
     kpiCard('Mariana', marianaTotal, [
-      {label: monthLabel(mesAtual.mes), val: fmtBRL(marianaThis)},
-      {label: monthLabel(mesProximo.mes), val: fmtBRL(marianaNext)},
+      {label: monthLabel(mesAtual.mes), val: fmtBRL(marianaLiquidoThis)},
+      {label: monthLabel(mesProximo.mes), val: fmtBRL(marianaLiquidoNext)},
       {label: `Repasse (${pct}%)`, val: '-'+fmtBRL(repasse2m), cls: 'diff-bad'},
     ]);
 
