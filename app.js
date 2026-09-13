@@ -554,8 +554,8 @@ function renderProtocolos(){
           <button class="btn secondary" data-canceleditp="${p.id}">Cancelar</button>
         </div>` : ''}
         <div class="proto-grid">
-          <div><div class="k">Trabalho</div><div class="v">${fmtBRL(agg.somado)}</div></div>
-          <div><div class="k">Informado</div><div class="v">${p.valor_informado ? fmtBRL(p.valor_informado) : '—'}</div></div>
+          <div><div class="k">Lançamentos</div><div class="v">${fmtBRL(agg.somado)}</div></div>
+          <div><div class="k">Protocolo</div><div class="v">${p.valor_informado ? fmtBRL(p.valor_informado) : '—'}</div></div>
           <div><div class="k">Diferença de agrupamento</div><div class="v ${diffAgrupamentoOk?'diff-ok':'diff-bad'}">${p.valor_informado ? fmtBRL(diffAgrupamento) : '—'}</div></div>
           <div><div class="k">Recebido</div><div class="v">${p.recebido ? fmtBRL(p.valor_recebido||0) : '—'}</div></div>
           <div><div class="k">Diferença de pagamento</div><div class="v ${diffPagamentoOk?'diff-ok':'diff-bad'}">${diffPagamento===null ? '—' : fmtBRL(diffPagamento)}</div></div>
