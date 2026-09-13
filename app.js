@@ -502,10 +502,12 @@ function renderProtocolos(){
       const itemsSorted = [...agg.items].sort((a,b)=> a.data.localeCompare(b.data));
       return `<div class="proto-card" style="${p.arquivado?'opacity:.55':''}">
         <div class="top">
-          <div style="display:flex; align-items:baseline; gap:10px; flex-wrap:wrap">
+          <div style="display:flex; flex-direction:column; align-items:flex-start; gap:6px">
             <span class="num">Protocolo ${p.numero}</span>
-            <span class="pill neutral">${CONVENIO_LABEL[p.convenio]||p.convenio} · ${monthLabel(p.mes)}</span>
-            ${p.arquivado ? '<span class="pill neutral">arquivado</span>' : ''}
+            <div style="display:flex; gap:6px; flex-wrap:wrap">
+              <span class="pill neutral">${CONVENIO_LABEL[p.convenio]||p.convenio} · ${monthLabel(p.mes)}</span>
+              ${p.arquivado ? '<span class="pill neutral">arquivado</span>' : ''}
+            </div>
           </div>
           ${p.recebido ? '<span class="pill sage">recebido</span>' : '<span class="pill amber">aguardando</span>'}
         </div>
