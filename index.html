@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Fechamento Convênios</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="styles.css?v=20260913o">
+<link rel="stylesheet" href="styles.css?v=20260913p">
 </head>
 <body>
 
@@ -129,6 +129,7 @@
             </div>
           </div>
         </div>
+        <div id="protSemProtocoloBanner"></div>
       </div>
 
       <div class="card" id="formNovoProtocolo" hidden>
@@ -214,6 +215,17 @@
             <div class="table-wrap"><table>
               <thead><tr><th>Convênio</th><th>Mês</th><th>Protocolo</th><th class="right">Valor esperado</th><th>Pagamento esperado</th><th></th></tr></thead>
               <tbody id="tblPendentes"></tbody>
+            </table></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-pad">
+            <h2 id="tituloDiferencas">Protocolos com diferença</h2>
+            <p class="hint">Trabalho × informado (agrupamento errado) ou informado × recebido (pagamento incompleto).</p>
+            <div class="table-wrap"><table>
+              <thead><tr><th>Convênio</th><th>Mês</th><th>Protocolo</th><th class="right">Agrupamento</th><th class="right">Pagamento</th><th></th></tr></thead>
+              <tbody id="tblDiferencas"></tbody>
             </table></div>
           </div>
         </div>
@@ -305,7 +317,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=20260913o"></script>
-<script src="app.js?v=20260913o"></script>
+<script src="config.js?v=20260913p"></script>
+<script src="app.js?v=20260913p"></script>
 </body>
 </html>

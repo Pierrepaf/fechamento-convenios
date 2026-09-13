@@ -488,6 +488,15 @@ function renderProtocolos(){
     .filter(p=> (mostrarArquivados || !p.arquivado) && (!convenioFiltro || p.convenio===convenioFiltro) && (!mesFiltro || p.mes===mesFiltro))
     .sort((a,b)=> b.mes.localeCompare(a.mes) || a.convenio.localeCompare(b.convenio) || a.numero.localeCompare(b.numero));
 
+  const semProtocolo = ativos().filter(a=>
+    a.convenio !== 'PARTICULAR' && !a.protocolo_id &&
+    (!convenioFiltro || a.convenio===convenioFiltro) && (!mesFiltro || monthKey(a.data)===mesFiltro)
+  );
+  const semProtocoloValor = semProtocolo.reduce((s,a)=>s+a.valor,0);
+  document.getElementById('protSemProtocoloBanner').innerHTML = semProtocolo.length===0
+    ? `<div class="banner sage">✓ Nenhum atendimento sem protocolo</div>`
+    : `<div class="banner amber">${semProtocolo.length} atendimento(s) sem protocolo — ${fmtBRL(semProtocoloValor)}</div>`;
+
   if(vinculacao) renderCheckListVinculacao();
 
   const listEl = document.getElementById('protList');
@@ -496,8 +505,10 @@ function renderProtocolos(){
   } else {
     listEl.innerHTML = protocolosFiltrados.map(p=>{
       const agg = protoAggregates(p.id);
-      const diff = (p.valor_informado||0) - agg.somado;
-      const diffOk = Math.abs(diff) < 0.005 || !p.valor_informado;
+      const diffAgrupamento = agg.somado - (p.valor_informado||0);
+      const diffAgrupamentoOk = Math.abs(diffAgrupamento) < 0.005 || !p.valor_informado;
+      const diffPagamento = p.recebido ? (p.valor_informado||0) - (p.valor_recebido||0) : null;
+      const diffPagamentoOk = diffPagamento===null || Math.abs(diffPagamento) < 0.005;
       const expanded = expandedProtocolos.has(p.id);
       const itemsSorted = [...agg.items].sort((a,b)=> a.data.localeCompare(b.data));
       return `<div class="proto-card" style="${p.arquivado?'opacity:.55':''}">
@@ -512,16 +523,16 @@ function renderProtocolos(){
           ${p.recebido ? '<span class="pill sage">recebido</span>' : '<span class="pill amber">aguardando</span>'}
         </div>
         <div class="proto-grid">
-          <div><div class="k">Valor informado</div><div class="v">${p.valor_informado ? fmtBRL(p.valor_informado) : '—'}</div></div>
-          <div><div class="k">Soma das linhas</div><div class="v">${fmtBRL(agg.somado)}</div></div>
-          <div><div class="k">Diferença</div><div class="v ${diffOk?'diff-ok':'diff-bad'}">${p.valor_informado ? fmtBRL(diff) : '—'}</div></div>
-          <div><div class="k">Lenice</div><div class="v">${fmtBRL(agg.lenice)}</div></div>
-          <div><div class="k">Mariana</div><div class="v">${fmtBRL(agg.mariana)}</div></div>
+          <div><div class="k">Trabalho</div><div class="v">${fmtBRL(agg.somado)}</div></div>
+          <div><div class="k">Informado</div><div class="v">${p.valor_informado ? fmtBRL(p.valor_informado) : '—'}</div></div>
+          <div><div class="k">Diferença de agrupamento</div><div class="v ${diffAgrupamentoOk?'diff-ok':'diff-bad'}">${p.valor_informado ? fmtBRL(diffAgrupamento) : '—'}</div></div>
+          <div><div class="k">Recebido</div><div class="v">${p.recebido ? fmtBRL(p.valor_recebido||0) : '—'}</div></div>
+          <div><div class="k">Diferença de pagamento</div><div class="v ${diffPagamentoOk?'diff-ok':'diff-bad'}">${diffPagamento===null ? '—' : fmtBRL(diffPagamento)}</div></div>
           <div><div class="k">Pagamento esperado</div><div class="v">${agg.dataPagamento ? agg.dataPagamento.split('-').reverse().join('/') : '—'}</div></div>
         </div>
         <div class="toolbar" style="margin-top:10px; margin-bottom:0">
-          <button class="btn secondary" data-toggleitems="${p.id}">${expanded ? 'Ocultar' : 'Ver'} itens (${agg.items.length})</button>
-          ${p.arquivado ? '' : `<button class="btn secondary" data-vincular="${p.id}" data-convenio="${p.convenio}" data-mes="${p.mes}">Vincular itens</button>`}
+          <button class="btn secondary" data-toggleitems="${p.id}">${expanded ? 'Ocultar' : 'Ver'} atendimentos (${agg.items.length})</button>
+          ${p.arquivado ? '' : `<button class="btn secondary" data-vincular="${p.id}" data-convenio="${p.convenio}" data-mes="${p.mes}">Vincular atendimentos</button>`}
         </div>
         <div class="table-wrap" ${expanded?'':'hidden'} data-itemswrap="${p.id}">
           <table>
@@ -717,6 +728,27 @@ function renderRelatorio(){
       <td>${p.dataPagamento ? p.dataPagamento.split('-').reverse().join('/') : '—'}</td>
       <td><span class="pill amber">aguardando</span></td>
     </tr>`).join('');
+
+  const comDiferenca = state.protocolos.filter(p=>!p.arquivado).map(p=>{
+    const agg = protoAggregates(p.id);
+    const diffAgrupamento = agg.somado - (p.valor_informado||0);
+    const diffPagamento = p.recebido ? (p.valor_informado||0) - (p.valor_recebido||0) : null;
+    return {...p, diffAgrupamento, diffPagamento};
+  }).filter(p=> Math.abs(p.diffAgrupamento)>=0.005 || (p.diffPagamento!==null && Math.abs(p.diffPagamento)>=0.005))
+    .sort((a,b)=> b.mes.localeCompare(a.mes));
+  document.getElementById('tituloDiferencas').textContent = `Protocolos com diferença${comDiferenca.length ? ' (' + comDiferenca.length + ')' : ''}`;
+  const tblDif = document.getElementById('tblDiferencas');
+  tblDif.innerHTML = comDiferenca.length===0 ? `<tr><td colspan="6" class="empty">Nenhuma diferença encontrada.</td></tr>` :
+    comDiferenca.map(p=>`<tr>
+      <td>${CONVENIO_LABEL[p.convenio]}</td><td>${monthLabel(p.mes)}</td><td>${p.numero}</td>
+      <td class="right num ${Math.abs(p.diffAgrupamento)<0.005?'diff-ok':'diff-bad'}">${fmtBRL(p.diffAgrupamento)}</td>
+      <td class="right num ${p.diffPagamento===null||Math.abs(p.diffPagamento)<0.005?'diff-ok':'diff-bad'}">${p.diffPagamento===null?'—':fmtBRL(p.diffPagamento)}</td>
+      <td><button class="btn secondary" data-irproto="${p.convenio}|${p.mes}">Ver</button></td>
+    </tr>`).join('');
+  tblDif.querySelectorAll('[data-irproto]').forEach(btn=> btn.addEventListener('click', ()=>{
+    const [convenio, mes] = btn.dataset.irproto.split('|');
+    irParaProtocolo(convenio, mes);
+  }));
 }
 
 // ---------------- Parâmetros ----------------
