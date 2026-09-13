@@ -8,12 +8,19 @@ const todayISO = () => new Date().toISOString().slice(0,10);
 const todayMonthKey = () => todayISO().slice(0,7);
 function addMonths(mkey, n){ let [y,m]=mkey.split('-').map(Number); m+=n; while(m>12){m-=12;y++;} while(m<1){m+=12;y--;} return `${y}-${pad2(m)}`; }
 function daysInMonth(y,m){ return new Date(y,m,0).getDate(); }
+function blockNonNumeric(input){
+  input.addEventListener('keydown', e=>{ if(['e','E','+','-'].includes(e.key)) e.preventDefault(); });
+  input.addEventListener('paste', e=>{
+    const text = (e.clipboardData || window.clipboardData).getData('text');
+    if(/[eE+\-]/.test(text)) e.preventDefault();
+  });
+}
 
 // ---------------- Supabase wiring ----------------
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let state = {
-  atendimentos: [],  // {id, data, medica, convenio, tipo_servico, procedimento, paciente, valor, protocolo_id}
+  atendimentos: [],  // {id, data, medica, convenio, tipo_servico, procedimento, paciente, valor, protocolo_id, arquivado}
   protocolos: [],    // {id, numero, convenio, mes, valor_informado, recebido, data_recebida, valor_recebido}
   parametros: {},    // chave -> {atraso_meses, dia_pagamento}
   unimedPrazos: {},  // chave -> dia
@@ -48,6 +55,7 @@ async function refreshAtendimentos(){
   state.atendimentos = numify(await sbSelect('atendimentos'), ['valor']);
   renderAll();
 }
+const ativos = () => state.atendimentos.filter(a=>!a.arquivado);
 async function refreshProtocolosData(){
   state.protocolos = numify(await sbSelect('protocolos'), ['valor_informado','valor_recebido']);
   renderAll();
@@ -250,14 +258,17 @@ document.getElementById('btnSalvarNovoLancamento').addEventListener('click', ()=
   salvarLancamento(document.getElementById('btnSalvarNovoLancamento'), true);
 });
 refreshProcedimentoOptions();
+blockNonNumeric(document.getElementById('fValor'));
+blockNonNumeric(document.getElementById('protValorInformado'));
 
-['filData','filMedica','filConvenio'].forEach(id=>document.getElementById(id).addEventListener('change', renderLancamentos));
+['filData','filMedica','filConvenio','filArquivados'].forEach(id=>document.getElementById(id).addEventListener('change', renderLancamentos));
 document.getElementById('filPaciente').addEventListener('input', renderLancamentos);
 document.getElementById('btnLimparFiltros').addEventListener('click', ()=>{
   document.getElementById('filData').value = '';
   document.getElementById('filMedica').value = '';
   document.getElementById('filConvenio').value = '';
   document.getElementById('filPaciente').value = '';
+  document.getElementById('filArquivados').checked = false;
   renderLancamentos();
 });
 
@@ -275,8 +286,10 @@ function renderLancamentos(){
   const medica = document.getElementById('filMedica').value;
   const convenio = document.getElementById('filConvenio').value;
   const busca = document.getElementById('filPaciente').value.trim().toLowerCase();
+  const mostrarArquivados = document.getElementById('filArquivados').checked;
 
   let rows = state.atendimentos.filter(a=>
+    (mostrarArquivados || !a.arquivado) &&
     (!data || a.data===data) &&
     (!medica || a.medica===medica) && (!convenio || a.convenio===convenio) &&
     (!busca || (a.paciente||'').toLowerCase().includes(busca))
@@ -287,7 +300,7 @@ function renderLancamentos(){
   if(rows.length===0){ tbody.innerHTML = `<tr><td colspan="9" class="empty">Nenhum lançamento encontrado.</td></tr>`; return; }
   tbody.innerHTML = rows.map(a=>{
     const proto = a.protocolo_id ? (state.protocolos.find(p=>p.id===a.protocolo_id)?.numero || '—') : '—';
-    return `<tr>
+    return `<tr style="${a.arquivado ? 'opacity:.5' : ''}">
       <td>${a.data.split('-').reverse().join('/')}</td>
       <td>${a.medica==='LENICE'?'Lenice':'Mariana'}</td>
       <td>${CONVENIO_LABEL[a.convenio]||a.convenio}</td>
@@ -295,17 +308,24 @@ function renderLancamentos(){
       <td>${a.tipo_servico==='CONSULTA'?'Consulta':'Exame'}</td>
       <td>${a.procedimento||''}</td>
       <td class="right num">${fmtBRL(a.valor)}</td>
-      <td>${a.protocolo_id ? `<span class="pill neutral">${proto}</span>` : '<span class="pill amber">sem protocolo</span>'}</td>
+      <td>${a.arquivado ? '<span class="pill neutral">arquivado</span>' : (a.protocolo_id ? `<span class="pill neutral">${proto}</span>` : '<span class="pill amber">sem protocolo</span>')}</td>
       <td style="white-space:nowrap">
-        <button class="icon-btn" data-edit="${a.id}" title="Editar">✎</button>
-        <button class="icon-btn" data-del="${a.id}" title="Excluir">✕</button>
+        ${a.arquivado
+          ? `<button class="icon-btn" data-unarch="${a.id}" title="Desarquivar">↺</button>`
+          : `<button class="icon-btn" data-edit="${a.id}" title="Editar">✎</button>
+             <button class="icon-btn" data-arch="${a.id}" title="Arquivar">✕</button>`
+        }
       </td>
     </tr>`;
   }).join('');
-  tbody.querySelectorAll('[data-del]').forEach(btn=> btn.addEventListener('click', async ()=>{
-    if(!confirm('Excluir este lançamento?')) return;
-    try{ await sbDelete('atendimentos', 'id', btn.dataset.del); }
-    catch(err){ alert('Não foi possível excluir (' + (err && err.message || 'erro') + '). Tente novamente.'); }
+  tbody.querySelectorAll('[data-arch]').forEach(btn=> btn.addEventListener('click', async ()=>{
+    if(!confirm('Arquivar este lançamento? Ele deixa de contar nos relatórios e some da lista, mas fica salvo (você pode desarquivar depois marcando "Mostrar arquivados").')) return;
+    try{ await sbUpdate('atendimentos', 'id', btn.dataset.arch, {arquivado:true}); }
+    catch(err){ alert('Não foi possível arquivar (' + (err && err.message || 'erro') + '). Tente novamente.'); }
+  }));
+  tbody.querySelectorAll('[data-unarch]').forEach(btn=> btn.addEventListener('click', async ()=>{
+    try{ await sbUpdate('atendimentos', 'id', btn.dataset.unarch, {arquivado:false}); }
+    catch(err){ alert('Não foi possível desarquivar (' + (err && err.message || 'erro') + '). Tente novamente.'); }
   }));
   tbody.querySelectorAll('[data-edit]').forEach(btn=> btn.addEventListener('click', ()=> abrirEdicao(btn.dataset.edit)));
 }
@@ -315,7 +335,7 @@ document.getElementById('protConvenio').addEventListener('change', renderProtoco
 document.getElementById('protMes').addEventListener('change', renderProtocolos);
 
 function protoAggregates(protoId){
-  const items = state.atendimentos.filter(a=>a.protocolo_id===protoId);
+  const items = ativos().filter(a=>a.protocolo_id===protoId);
   const lenice = items.filter(a=>a.medica==='LENICE').reduce((s,a)=>s+a.valor,0);
   const mariana = items.filter(a=>a.medica==='MARIANA').reduce((s,a)=>s+a.valor,0);
   let pagamento = null;
@@ -335,7 +355,7 @@ function renderProtocolos(){
   if(!convenio || !mes){ box.hidden = true; banner.innerHTML=''; return; }
   box.hidden = false;
 
-  const todosDoGrupo = state.atendimentos.filter(a=>a.convenio===convenio && monthKey(a.data)===mes);
+  const todosDoGrupo = ativos().filter(a=>a.convenio===convenio && monthKey(a.data)===mes);
   const pendentes = todosDoGrupo.filter(a=>!a.protocolo_id).sort((a,b)=> a.data.localeCompare(b.data));
   const protocolosDoGrupo = state.protocolos.filter(p=>p.convenio===convenio && p.mes===mes);
 
@@ -494,7 +514,7 @@ const N_MONTHS = 8;
 function projectionRows(filterFn){
   const start = todayMonthKey();
   const months = Array.from({length:N_MONTHS}, (_,i)=>addMonths(start,i));
-  const withPag = state.atendimentos.filter(filterFn).map(withPagamento).filter(a=>a.mesPagamento);
+  const withPag = ativos().filter(filterFn).map(withPagamento).filter(a=>a.mesPagamento);
   return months.map(mkey=>{
     const row = {mes:mkey};
     CONVENIOS.forEach(c=> row[c] = withPag.filter(a=>a.mesPagamento===mkey && a.convenio===c).reduce((s,a)=>s+a.valor,0));
@@ -530,7 +550,7 @@ function renderDetalheTable(el, rows){
 function computeSemProtocolo(){
   const hoje = todayMonthKey();
   const grupos = {};
-  state.atendimentos.forEach(a=>{
+  ativos().forEach(a=>{
     if(a.convenio === 'PARTICULAR' || a.protocolo_id) return;
     const mk = monthKey(a.data);
     if(mk >= hoje) return; // mes ainda em andamento - nao e alarme
@@ -581,7 +601,7 @@ function renderRelatorio(){
 
   const start = todayMonthKey();
   const months = Array.from({length:N_MONTHS}, (_,i)=>addMonths(start,i));
-  const withPag = state.atendimentos.map(withPagamento).filter(a=>a.mesPagamento);
+  const withPag = ativos().map(withPagamento).filter(a=>a.mesPagamento);
   const detalhe = months.map(mkey=>{
     const row = {mes:mkey};
     CONVENIOS.forEach(c=>{
