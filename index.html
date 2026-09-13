@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Fechamento Convênios</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="styles.css?v=20260913i">
+<link rel="stylesheet" href="styles.css?v=20260913j">
 </head>
 <body>
 
@@ -110,21 +110,22 @@
           <h1>Protocolos</h1>
           <p>O convênio decide como agrupar os pagamentos — aqui vocês registram esse agrupamento e conferem se nada ficou de fora.</p>
         </div>
-        <button class="btn" id="btnNovoProtocolo" disabled>+ Novo protocolo</button>
+        <button class="btn" id="btnNovoProtocolo">+ Novo protocolo</button>
       </div>
 
       <div class="card card-pad">
-        <div class="toolbar">
-          <div class="field"><label>Convênio</label>
-            <select id="protConvenio">
-              <option value="">Selecione…</option>
-              <option value="AMIL">Amil</option><option value="BRADESCO">Bradesco</option>
-              <option value="PORTO_SEGURO">Porto Seguro</option><option value="UNIMED">Unimed</option>
-            </select>
+        <div class="filter-bar">
+          <div class="filter-label">🔎 Filtros — só o que aparece na lista abaixo</div>
+          <div class="toolbar">
+            <div class="field"><label>Convênio</label>
+              <select id="protFiltroConvenio"><option value="">Todos</option>
+                <option value="AMIL">Amil</option><option value="BRADESCO">Bradesco</option>
+                <option value="PORTO_SEGURO">Porto Seguro</option><option value="UNIMED">Unimed</option>
+              </select>
+            </div>
+            <div class="field"><label>Mês de atendimento</label><select id="protFiltroMes"><option value="">Todos</option></select></div>
           </div>
-          <div class="field"><label>Mês de atendimento</label><select id="protMes"><option value="">Selecione…</option></select></div>
         </div>
-        <div id="protBanner"></div>
       </div>
 
       <div class="card" id="formNovoProtocolo" hidden>
@@ -133,8 +134,16 @@
             <h2>Novo protocolo</h2>
             <button class="icon-btn" id="btnFecharNovoProtocolo" title="Fechar" aria-label="Fechar" style="font-size:18px; line-height:1">✕</button>
           </div>
-          <p class="hint">Primeiro registrem o número e o valor que o convênio informou. Depois vocês escolhem quais atendimentos entram nele.</p>
+          <p class="hint">Primeiro registrem o convênio, o mês, o número e o valor que o convênio informou. Depois vocês escolhem quais atendimentos entram nele.</p>
           <div class="toolbar" style="margin-top:12px; align-items:flex-end">
+            <div class="field"><label>Convênio</label>
+              <select id="protNovoConvenio">
+                <option value="">Selecione…</option>
+                <option value="AMIL">Amil</option><option value="BRADESCO">Bradesco</option>
+                <option value="PORTO_SEGURO">Porto Seguro</option><option value="UNIMED">Unimed</option>
+              </select>
+            </div>
+            <div class="field"><label>Mês de atendimento</label><select id="protNovoMes"><option value="">Selecione…</option></select></div>
             <div class="field"><label>Número do protocolo</label><input type="text" id="protNumero" placeholder="ex: 3102308888250"></div>
             <div class="field"><label>Valor informado pelo convênio</label><input type="number" step="0.01" id="protValorInformado" placeholder="0,00"></div>
             <button class="btn" id="btnCriarProtocoloShell">Criar e escolher itens</button>
@@ -162,9 +171,9 @@
         </div>
       </div>
 
-      <div class="card" id="protListCard" hidden>
+      <div class="card">
         <div class="card-pad">
-          <h2>Protocolos deste convênio/mês</h2>
+          <h2>Protocolos</h2>
           <div id="protList"></div>
         </div>
       </div>
@@ -292,7 +301,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=20260913i"></script>
-<script src="app.js?v=20260913i"></script>
+<script src="config.js?v=20260913j"></script>
+<script src="app.js?v=20260913j"></script>
 </body>
 </html>
