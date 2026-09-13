@@ -1,6 +1,7 @@
 const CONVENIOS = ["AMIL","BRADESCO","PORTO_SEGURO","UNIMED","PARTICULAR"];
 const CONVENIO_LABEL = {AMIL:"Amil", BRADESCO:"Bradesco", PORTO_SEGURO:"Porto Seguro", UNIMED:"Unimed", PARTICULAR:"Particular"};
 const fmtBRL = v => (v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+const cleanMoney = v => Math.abs(v) < 0.005 ? 0 : v; // avoids "-R$0,00" from floating-point noise on near-zero diffs
 const pad2 = n => String(n).padStart(2,'0');
 const monthKey = iso => iso ? iso.slice(0,7) : '';
 const monthLabel = key => { if(!key) return ''; const [y,m]=key.split('-'); return new Date(Number(y),Number(m)-1,1).toLocaleDateString('pt-BR',{month:'short',year:'numeric'}); };
@@ -505,9 +506,9 @@ function renderProtocolos(){
   } else {
     listEl.innerHTML = protocolosFiltrados.map(p=>{
       const agg = protoAggregates(p.id);
-      const diffAgrupamento = agg.somado - (p.valor_informado||0);
+      const diffAgrupamento = cleanMoney(agg.somado - (p.valor_informado||0));
       const diffAgrupamentoOk = Math.abs(diffAgrupamento) < 0.005 || !p.valor_informado;
-      const diffPagamento = p.recebido ? (p.valor_informado||0) - (p.valor_recebido||0) : null;
+      const diffPagamento = p.recebido ? cleanMoney((p.valor_informado||0) - (p.valor_recebido||0)) : null;
       const diffPagamentoOk = diffPagamento===null || Math.abs(diffPagamento) < 0.005;
       const expanded = expandedProtocolos.has(p.id);
       const itemsSorted = [...agg.items].sort((a,b)=> a.data.localeCompare(b.data));
@@ -731,8 +732,8 @@ function renderRelatorio(){
 
   const comDiferenca = state.protocolos.filter(p=>!p.arquivado).map(p=>{
     const agg = protoAggregates(p.id);
-    const diffAgrupamento = agg.somado - (p.valor_informado||0);
-    const diffPagamento = p.recebido ? (p.valor_informado||0) - (p.valor_recebido||0) : null;
+    const diffAgrupamento = cleanMoney(agg.somado - (p.valor_informado||0));
+    const diffPagamento = p.recebido ? cleanMoney((p.valor_informado||0) - (p.valor_recebido||0)) : null;
     return {...p, diffAgrupamento, diffPagamento};
   }).filter(p=> Math.abs(p.diffAgrupamento)>=0.005 || (p.diffPagamento!==null && Math.abs(p.diffPagamento)>=0.005))
     .sort((a,b)=> b.mes.localeCompare(a.mes));
