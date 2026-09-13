@@ -54,6 +54,7 @@
                 <option value="PARTICULAR">Particular</option>
               </select>
             </div>
+            <div class="field" style="flex:1; min-width:180px"><label>Paciente</label><input type="text" id="fPaciente" placeholder="Nome do paciente"></div>
             <div class="field"><label>Tipo</label>
               <select id="fTipo"><option value="CONSULTA">Consulta</option><option value="EXAME">Exame</option></select>
             </div>
@@ -61,7 +62,6 @@
               <select id="fProcedimento"></select>
             </div>
             <div class="field" id="fProcedimentoOutroWrap" hidden><label>Especifique</label><input type="text" id="fProcedimentoOutro" placeholder="Nome do exame"></div>
-            <div class="field" style="flex:1; min-width:180px"><label>Paciente</label><input type="text" id="fPaciente" placeholder="Nome do paciente"></div>
             <div class="field"><label>Valor (R$)</label><input type="number" step="0.01" id="fValor" placeholder="0,00"></div>
             <button class="btn" id="btnSalvarLancamento">Salvar</button>
             <button class="btn secondary" id="btnCancelarLancamento">Cancelar</button>
@@ -94,7 +94,7 @@
         </div>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>Data</th><th>Paciente</th><th>Médica</th><th>Convênio</th><th>Tipo</th><th>Procedimento</th><th class="right">Valor</th><th>Protocolo</th><th></th></tr></thead>
+            <thead><tr><th>Data</th><th>Médica</th><th>Convênio</th><th>Paciente</th><th>Tipo</th><th>Procedimento</th><th class="right">Valor</th><th>Protocolo</th><th></th></tr></thead>
             <tbody id="tblLancamentos"></tbody>
           </table>
         </div>

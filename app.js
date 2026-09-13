@@ -273,9 +273,9 @@ function renderLancamentos(){
     const proto = a.protocolo_id ? (state.protocolos.find(p=>p.id===a.protocolo_id)?.numero || '—') : '—';
     return `<tr>
       <td>${a.data.split('-').reverse().join('/')}</td>
-      <td>${a.paciente||''}</td>
       <td>${a.medica==='LENICE'?'Lenice':'Mariana'}</td>
       <td>${CONVENIO_LABEL[a.convenio]||a.convenio}</td>
+      <td>${a.paciente||''}</td>
       <td>${a.tipo_servico==='CONSULTA'?'Consulta':'Exame'}</td>
       <td>${a.procedimento||''}</td>
       <td class="right num">${fmtBRL(a.valor)}</td>
@@ -378,11 +378,11 @@ function renderProtocolos(){
         <button class="btn secondary" style="margin-top:10px" data-toggleitems="${p.id}">${expanded ? 'Ocultar' : 'Ver'} itens (${agg.items.length})</button>
         <div class="table-wrap" ${expanded?'':'hidden'} data-itemswrap="${p.id}">
           <table>
-            <thead><tr><th>Data</th><th>Paciente</th><th>Médica</th><th>Tipo</th><th>Procedimento</th><th class="right">Valor</th></tr></thead>
+            <thead><tr><th>Data</th><th>Médica</th><th>Paciente</th><th>Tipo</th><th>Procedimento</th><th class="right">Valor</th></tr></thead>
             <tbody>${itemsSorted.map(it=>`<tr>
               <td>${it.data.split('-').reverse().join('/')}</td>
-              <td>${it.paciente||''}</td>
               <td>${it.medica==='LENICE'?'Lenice':'Mariana'}</td>
+              <td>${it.paciente||''}</td>
               <td>${it.tipo_servico==='CONSULTA'?'Consulta':'Exame'}</td>
               <td>${it.procedimento||''}</td>
               <td class="right num">${fmtBRL(it.valor)}</td>
