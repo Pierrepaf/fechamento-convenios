@@ -331,8 +331,8 @@ function renderLancamentos(){
 }
 
 // ---------------- Protocolos ----------------
-document.getElementById('protConvenio').addEventListener('change', renderProtocolos);
-document.getElementById('protMes').addEventListener('change', renderProtocolos);
+document.getElementById('protConvenio').addEventListener('change', ()=>{ fecharFormsProtocolo(); renderProtocolos(); });
+document.getElementById('protMes').addEventListener('change', ()=>{ fecharFormsProtocolo(); renderProtocolos(); });
 
 function protoAggregates(protoId){
   const items = ativos().filter(a=>a.protocolo_id===protoId);
@@ -344,19 +344,157 @@ function protoAggregates(protoId){
 }
 
 let expandedProtocolos = new Set();
+let protocoloEmVinculacao = null;
+
+function fecharFormsProtocolo(){
+  document.getElementById('formNovoProtocolo').hidden = true;
+  document.getElementById('formVincularItens').hidden = true;
+  protocoloEmVinculacao = null;
+}
+
+function pendentesDoGrupo(){
+  const convenio = document.getElementById('protConvenio').value;
+  const mes = document.getElementById('protMes').value;
+  return ativos().filter(a=>a.convenio===convenio && monthKey(a.data)===mes && !a.protocolo_id)
+    .sort((a,b)=> a.data.localeCompare(b.data));
+}
+
+function checklistRowHtml(a){
+  return `
+      <label class="check-row">
+        <input type="checkbox" value="${a.id}" data-tipo="${a.tipo_servico}" class="protoChk">
+        <span class="who ${a.medica}">${a.medica==='LENICE'?'Lenice':'Mariana'}</span>
+        <span class="desc">${a.data.split('-').reverse().join('/')} · ${a.tipo_servico==='CONSULTA'?'Consulta':a.procedimento||'Exame'} · ${a.paciente||''}</span>
+        <span class="val num">${fmtBRL(a.valor)}</span>
+      </label>`;
+}
+
+function renderCheckListVinculacao(){
+  const convenio = document.getElementById('protConvenio').value;
+  const pendentes = pendentesDoGrupo();
+  const list = document.getElementById('protCheckList');
+  if(pendentes.length===0){
+    list.innerHTML = `<div class="empty">Nada pendente — todos os itens já têm protocolo.</div>`;
+  } else if(convenio === 'UNIMED'){
+    const primeira = pendentes.filter(a=> Number(a.data.split('-')[2]) <= 15);
+    const segunda = pendentes.filter(a=> Number(a.data.split('-')[2]) > 15);
+    list.innerHTML =
+      (primeira.length ? `<div class="filter-label" style="margin:4px 0">Quinzena 1-15 (${primeira.length})</div>${primeira.map(checklistRowHtml).join('')}` : '') +
+      (segunda.length ? `<div class="filter-label" style="margin:8px 0 4px">Quinzena 16-30 (${segunda.length})</div>${segunda.map(checklistRowHtml).join('')}` : '');
+  } else {
+    list.innerHTML = pendentes.map(checklistRowHtml).join('');
+  }
+  list.querySelectorAll('.protoChk').forEach(c=> c.addEventListener('change', updateVincularBtn));
+  updateVincularBtn();
+}
+
+function updateVincularBtn(){
+  const n = document.querySelectorAll('.protoChk:checked').length;
+  const btn = document.getElementById('btnVincularSelecionados');
+  btn.disabled = n===0;
+  btn.textContent = n>0 ? `Vincular ${n} selecionado(s)` : 'Vincular selecionados';
+}
+
+function setChecksByTipo(tipo, val){
+  document.querySelectorAll(`.protoChk[data-tipo="${tipo}"]`).forEach(c=> c.checked = val);
+  updateVincularBtn();
+}
+document.getElementById('btnSelTodasConsultas').addEventListener('click', ()=> setChecksByTipo('CONSULTA', true));
+document.getElementById('btnSelTodosExames').addEventListener('click', ()=> setChecksByTipo('EXAME', true));
+document.getElementById('btnSelNenhum').addEventListener('click', ()=>{
+  document.querySelectorAll('.protoChk').forEach(c=>c.checked=false);
+  updateVincularBtn();
+});
+
+function openVincular(protocoloId){
+  protocoloEmVinculacao = protocoloId;
+  const p = state.protocolos.find(x=>x.id===protocoloId);
+  document.getElementById('vincularTitulo').textContent = p ? `Escolher atendimentos — Protocolo ${p.numero}` : 'Escolher atendimentos';
+  document.getElementById('formNovoProtocolo').hidden = true;
+  document.getElementById('formVincularItens').hidden = false;
+  renderCheckListVinculacao();
+  document.getElementById('formVincularItens').scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+document.getElementById('btnNovoProtocolo').addEventListener('click', ()=>{
+  document.getElementById('protNumero').value = '';
+  document.getElementById('protValorInformado').value = '';
+  document.getElementById('formVincularItens').hidden = true;
+  protocoloEmVinculacao = null;
+  document.getElementById('formNovoProtocolo').hidden = false;
+  document.getElementById('formNovoProtocolo').scrollIntoView({behavior:'smooth', block:'start'});
+});
+document.getElementById('btnCancelarNovoProtocolo').addEventListener('click', ()=>{
+  document.getElementById('formNovoProtocolo').hidden = true;
+});
+document.getElementById('btnFecharNovoProtocolo').addEventListener('click', ()=>{
+  document.getElementById('formNovoProtocolo').hidden = true;
+});
+document.getElementById('btnFecharVincular').addEventListener('click', ()=>{
+  document.getElementById('formVincularItens').hidden = true;
+  protocoloEmVinculacao = null;
+});
+
+document.getElementById('btnCriarProtocoloShell').addEventListener('click', async ()=>{
+  const convenio = document.getElementById('protConvenio').value;
+  const mes = document.getElementById('protMes').value;
+  const numero = document.getElementById('protNumero').value.trim();
+  const valorInformado = parseFloat(document.getElementById('protValorInformado').value);
+  if(!numero || isNaN(valorInformado)){ alert('Preencham o número do protocolo e o valor informado pelo convênio — os dois são obrigatórios.'); return; }
+  const btn = document.getElementById('btnCriarProtocoloShell');
+  const originalText = btn.textContent;
+  btn.disabled = true; btn.textContent = 'Salvando…';
+  try{
+    const novo = await sbInsert('protocolos', {
+      numero, convenio, mes, valor_informado: valorInformado,
+      recebido:false, data_recebida:null, valor_recebido:null
+    });
+    openVincular(novo.id);
+  } catch(err){
+    alert('Não foi possível criar o protocolo (' + (err && err.message || 'erro') + '). Tente novamente.');
+  } finally {
+    btn.disabled = false; btn.textContent = originalText;
+  }
+});
+
+document.getElementById('btnVincularSelecionados').addEventListener('click', async ()=>{
+  const ids = Array.from(document.querySelectorAll('.protoChk:checked')).map(c=>c.value);
+  if(ids.length===0 || !protocoloEmVinculacao) return;
+  const btn = document.getElementById('btnVincularSelecionados');
+  const originalText = btn.textContent;
+  btn.disabled = true; btn.textContent = 'Vinculando…';
+  try{
+    for(const id of ids) await sbUpdate('atendimentos', 'id', id, {protocolo_id: protocoloEmVinculacao});
+    document.getElementById('formVincularItens').hidden = true;
+    protocoloEmVinculacao = null;
+  } catch(err){
+    alert('Não foi possível vincular (' + (err && err.message || 'erro') + '). Tente novamente.');
+  } finally {
+    btn.disabled = false; btn.textContent = originalText;
+  }
+});
+
 function renderProtocolos(){
   const convenioSel = document.getElementById('protConvenio');
   const mesSel = document.getElementById('protMes');
   populateMonthOptions(mesSel, 'Selecione…');
 
   const convenio = convenioSel.value, mes = mesSel.value;
-  const box = document.getElementById('protPending');
   const banner = document.getElementById('protBanner');
-  if(!convenio || !mes){ box.hidden = true; banner.innerHTML=''; return; }
-  box.hidden = false;
+  const listCard = document.getElementById('protListCard');
+  const btnNovo = document.getElementById('btnNovoProtocolo');
 
-  const todosDoGrupo = ativos().filter(a=>a.convenio===convenio && monthKey(a.data)===mes);
-  const pendentes = todosDoGrupo.filter(a=>!a.protocolo_id).sort((a,b)=> a.data.localeCompare(b.data));
+  if(!convenio || !mes){
+    banner.innerHTML = '';
+    listCard.hidden = true;
+    btnNovo.disabled = true;
+    fecharFormsProtocolo();
+    return;
+  }
+  btnNovo.disabled = false;
+  listCard.hidden = false;
+
+  const pendentes = pendentesDoGrupo();
   const protocolosDoGrupo = state.protocolos.filter(p=>p.convenio===convenio && p.mes===mes);
 
   if(protocolosDoGrupo.length===0){
@@ -367,28 +505,7 @@ function renderProtocolos(){
     banner.innerHTML = `<div class="banner sage">✓ Todos os atendimentos deste convênio/mês já estão em algum protocolo.</div>`;
   }
 
-  const list = document.getElementById('protCheckList');
-  const rowHtml = a => `
-      <label class="check-row">
-        <input type="checkbox" value="${a.id}" class="protoChk">
-        <span class="who ${a.medica}">${a.medica==='LENICE'?'Lenice':'Mariana'}</span>
-        <span class="desc">${a.data.split('-').reverse().join('/')} · ${a.tipo_servico==='CONSULTA'?'Consulta':a.procedimento||'Exame'} · ${a.paciente||''}</span>
-        <span class="val num">${fmtBRL(a.valor)}</span>
-      </label>`;
-  if(pendentes.length===0){
-    list.innerHTML = `<div class="empty">Nada pendente — todos os itens já têm protocolo.</div>`;
-  } else if(convenio === 'UNIMED'){
-    const primeira = pendentes.filter(a=> Number(a.data.split('-')[2]) <= 15);
-    const segunda = pendentes.filter(a=> Number(a.data.split('-')[2]) > 15);
-    list.innerHTML =
-      (primeira.length ? `<div class="filter-label" style="margin:4px 0">Quinzena 1-15 (${primeira.length})</div>${primeira.map(rowHtml).join('')}` : '') +
-      (segunda.length ? `<div class="filter-label" style="margin:8px 0 4px">Quinzena 16-30 (${segunda.length})</div>${segunda.map(rowHtml).join('')}` : '');
-    list.querySelectorAll('.protoChk').forEach(c=> c.addEventListener('change', updateCriarBtn));
-  } else {
-    list.innerHTML = pendentes.map(rowHtml).join('');
-    list.querySelectorAll('.protoChk').forEach(c=> c.addEventListener('change', updateCriarBtn));
-  }
-  updateCriarBtn();
+  if(protocoloEmVinculacao) renderCheckListVinculacao();
 
   const listEl = document.getElementById('protList');
   if(protocolosDoGrupo.length===0){
@@ -411,7 +528,10 @@ function renderProtocolos(){
           <div><div class="k">Mariana</div><div class="v">${fmtBRL(agg.mariana)}</div></div>
           <div><div class="k">Pagamento esperado</div><div class="v">${agg.dataPagamento ? agg.dataPagamento.split('-').reverse().join('/') : '—'}</div></div>
         </div>
-        <button class="btn secondary" style="margin-top:10px" data-toggleitems="${p.id}">${expanded ? 'Ocultar' : 'Ver'} itens (${agg.items.length})</button>
+        <div class="toolbar" style="margin-top:10px; margin-bottom:0">
+          <button class="btn secondary" data-toggleitems="${p.id}">${expanded ? 'Ocultar' : 'Ver'} itens (${agg.items.length})</button>
+          <button class="btn secondary" data-vincular="${p.id}">Vincular itens</button>
+        </div>
         <div class="table-wrap" ${expanded?'':'hidden'} data-itemswrap="${p.id}">
           <table>
             <thead><tr><th>Data</th><th>Médica</th><th>Paciente</th><th>Tipo</th><th>Procedimento</th><th class="right">Valor</th></tr></thead>
@@ -442,6 +562,7 @@ function renderProtocolos(){
       if(expandedProtocolos.has(id)) expandedProtocolos.delete(id); else expandedProtocolos.add(id);
       renderProtocolos();
     }));
+    listEl.querySelectorAll('[data-vincular]').forEach(btn=> btn.addEventListener('click', ()=> openVincular(btn.dataset.vincular)));
     listEl.querySelectorAll('[data-savep]').forEach(btn=> btn.addEventListener('click', async ()=>{
       const id = btn.dataset.savep;
       const recebido = document.querySelector(`[data-recv="${id}"]`).value === 'sim';
@@ -472,42 +593,6 @@ function renderProtocolos(){
     }));
   }
 }
-
-function updateCriarBtn(){
-  const n = document.querySelectorAll('.protoChk:checked').length;
-  const numero = document.getElementById('protNumero').value.trim();
-  document.getElementById('btnCriarProtocolo').disabled = !(n>0 && numero);
-  document.getElementById('btnCriarProtocolo').textContent = n>0 ? `Criar protocolo com ${n} selecionado(s)` : 'Criar protocolo';
-}
-document.getElementById('protNumero').addEventListener('input', updateCriarBtn);
-
-document.getElementById('btnCriarProtocolo').addEventListener('click', async ()=>{
-  const convenio = document.getElementById('protConvenio').value;
-  const mes = document.getElementById('protMes').value;
-  const numero = document.getElementById('protNumero').value.trim();
-  const valorInformado = parseFloat(document.getElementById('protValorInformado').value);
-  const ids = Array.from(document.querySelectorAll('.protoChk:checked')).map(c=>c.value);
-  if(ids.length===0 || !numero) return;
-  const btn = document.getElementById('btnCriarProtocolo');
-  const originalText = btn.textContent;
-  btn.disabled = true;
-  btn.textContent = 'Salvando…';
-  try{
-    const novo = await sbInsert('protocolos', {
-      numero, convenio, mes, valor_informado: isNaN(valorInformado)?null:valorInformado,
-      recebido:false, data_recebida:null, valor_recebido:null
-    });
-    for(const id of ids) await sbUpdate('atendimentos', 'id', id, {protocolo_id: novo.id});
-    document.getElementById('protNumero').value = '';
-    document.getElementById('protValorInformado').value = '';
-    btn.textContent = 'Protocolo criado ✓';
-    setTimeout(updateCriarBtn, 1500);
-  } catch(err){
-    alert('Não foi possível salvar o protocolo (' + (err && err.message || 'erro') + '). Tente novamente.');
-    btn.disabled = false;
-    btn.textContent = originalText;
-  }
-});
 
 // ---------------- Relatório ----------------
 const N_MONTHS = 8;
