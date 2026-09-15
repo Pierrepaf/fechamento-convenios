@@ -87,6 +87,17 @@ function quinzenaOf(dataISO){
   const d = Number(dataISO.split('-')[2]);
   return (d >= state.unimedP1Dia && d < state.unimedP2Dia) ? "1-15" : "16-30";
 }
+function mesLogicoDoAtendimento(a){
+  // Which convênio/mês group an atendimento belongs to for protocolo purposes. For everyone
+  // except Unimed this is just its own calendar month. For Unimed, a day before unimedP1Dia is
+  // really the tail of the PREVIOUS month's 2nd quinzena (e.g. Sep 1-4 belongs to "August"),
+  // so it must be grouped there instead — this is the one place that decides that, so every
+  // "sem protocolo" count and the Protocolos linking screen can never disagree about it.
+  const mk = monthKey(a.data);
+  if(a.convenio !== 'UNIMED') return mk;
+  const d = Number(a.data.split('-')[2]);
+  return d < state.unimedP1Dia ? addMonths(mk, -1) : mk;
+}
 function computeDataPagamento(at){
   const key = at.convenio + "_" + at.tipo_servico;
   const param = state.parametros[key];
@@ -354,24 +365,9 @@ let vinculacao = null; // {protocoloId, convenio, mes}
 let editingProtocolo = null; // id of the protocolo whose número/valor informado is being edited
 
 function pendentesDoGrupo(convenio, mes){
-  const base = ativos().filter(a=>a.convenio===convenio && !a.protocolo_id);
-  let items;
-  if(convenio === 'UNIMED'){
-    // The 2nd quinzena spills into the next calendar month (e.g. 21-4), so "August" for Unimed
-    // means: August's own days from unimedP1Dia onward, PLUS September's days before unimedP1Dia
-    // (that spillover tail). Days in August before unimedP1Dia belong to JULY's 2nd quinzena instead.
-    const proxMes = addMonths(mes, 1);
-    items = base.filter(a=>{
-      const mk = monthKey(a.data);
-      const d = Number(a.data.split('-')[2]);
-      if(mk === mes) return d >= state.unimedP1Dia;
-      if(mk === proxMes) return d < state.unimedP1Dia;
-      return false;
-    });
-  } else {
-    items = base.filter(a=> monthKey(a.data)===mes);
-  }
-  return items.sort((a,b)=> a.data.localeCompare(b.data));
+  return ativos()
+    .filter(a=>a.convenio===convenio && !a.protocolo_id && mesLogicoDoAtendimento(a)===mes)
+    .sort((a,b)=> a.data.localeCompare(b.data));
 }
 
 function checklistRowHtml(a){
@@ -532,7 +528,7 @@ function renderProtocolos(){
 
   const semProtocolo = ativos().filter(a=>
     a.convenio !== 'PARTICULAR' && !a.protocolo_id &&
-    (!convenioFiltro || a.convenio===convenioFiltro) && (!mesFiltro || monthKey(a.data)===mesFiltro)
+    (!convenioFiltro || a.convenio===convenioFiltro) && (!mesFiltro || mesLogicoDoAtendimento(a)===mesFiltro)
   );
   const semProtocoloValor = semProtocolo.reduce((s,a)=>s+a.valor,0);
   document.getElementById('protSemProtocoloBanner').innerHTML = semProtocolo.length===0
@@ -577,7 +573,7 @@ function renderProtocolos(){
         </div>` : ''}
         <div class="proto-grid">
           <div><div class="k">Lançamentos</div><div class="v">${fmtBRL(agg.somado)}</div></div>
-          <div><div class="k">Protocolo</div><div class="v">${p.valor_informado ? fmtBRL(p.valor_informado) : '—'}</div></div>
+          <div><div class="k">Valor do protocolo</div><div class="v">${p.valor_informado ? fmtBRL(p.valor_informado) : '—'}</div></div>
           <div><div class="k">Diferença de agrupamento</div><div class="v ${diffAgrupamentoOk?'diff-ok':'diff-bad'}">${p.valor_informado ? fmtBRL(diffAgrupamento) : '—'}</div></div>
           <div><div class="k">Recebido</div><div class="v">${p.recebido ? fmtBRL(p.valor_recebido||0) : '—'}</div></div>
           <div><div class="k">Diferença de pagamento</div><div class="v ${diffPagamentoOk?'diff-ok':'diff-bad'}">${diffPagamento===null ? '—' : fmtBRL(diffPagamento)}</div></div>
@@ -725,7 +721,7 @@ function computeSemProtocolo(){
   const grupos = {};
   ativos().forEach(a=>{
     if(a.convenio === 'PARTICULAR' || a.protocolo_id) return;
-    const mk = monthKey(a.data);
+    const mk = mesLogicoDoAtendimento(a);
     if(mk >= hoje) return; // mes ainda em andamento - nao e alarme
     const key = a.convenio + '|' + mk;
     if(!grupos[key]) grupos[key] = {convenio:a.convenio, mes:mk, count:0, valor:0};
