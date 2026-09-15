@@ -24,7 +24,8 @@ let state = {
   atendimentos: [],  // {id, data, medica, convenio, tipo_servico, procedimento, paciente, valor, protocolo_id, arquivado}
   protocolos: [],    // {id, numero, convenio, mes, valor_informado, recebido, data_recebida, valor_recebido}
   parametros: {},    // chave -> {atraso_meses, dia_pagamento}
-  unimedCortes: {},  // mes -> dia_corte (last day of that month's 1st quinzena; payment days themselves are fixed: 15 and last day of month)
+  unimedP1Dia: 5,    // day the 1st quinzena starts each month (fixed pattern, same every month)
+  unimedP2Dia: 21,   // day the 2nd quinzena starts each month; 2nd quinzena runs until unimedP1Dia-1 of the NEXT month
   repasseMariana: 0.30,
 };
 
@@ -68,29 +69,23 @@ async function refreshParametros(){
   state.parametros = p;
   renderAll();
 }
-async function refreshUnimedCortes(){
-  const rows = await sbSelect('unimed_cortes');
-  const p = {};
-  rows.forEach(r => { p[r.mes] = Number(r.dia_corte); });
-  state.unimedCortes = p;
-  renderAll();
-}
 async function refreshConfig(){
   const rows = await sbSelect('config');
-  if(rows[0]) state.repasseMariana = Number(rows[0].repasse_mariana);
+  if(rows[0]){
+    state.repasseMariana = Number(rows[0].repasse_mariana);
+    if(rows[0].unimed_p1_dia !== null && rows[0].unimed_p1_dia !== undefined) state.unimedP1Dia = Number(rows[0].unimed_p1_dia);
+    if(rows[0].unimed_p2_dia !== null && rows[0].unimed_p2_dia !== undefined) state.unimedP2Dia = Number(rows[0].unimed_p2_dia);
+  }
   renderAll();
 }
 
-function corteDoMes(mesAt){
-  // Cutoff day splitting that month's 1st quinzena from its 2nd. Varies month to month (Lenice sets it
-  // in Parâmetros); defaults to 15 for any month not yet configured.
-  const c = state.unimedCortes[mesAt];
-  return c === undefined ? 15 : c;
-}
 function quinzenaOf(dataISO){
-  const [y,m,d] = dataISO.split('-').map(Number);
-  const corte = corteDoMes(`${y}-${pad2(m)}`);
-  return d <= corte ? "1-15" : "16-30";
+  // Fixed recurring pattern (same every month): 1st quinzena runs unimedP1Dia..unimedP2Dia-1;
+  // 2nd quinzena runs unimedP2Dia..end of month, continuing into the next month through
+  // unimedP1Dia-1 (e.g. 5-20 / 21-4). So a day before unimedP1Dia belongs to the PREVIOUS
+  // month's 2nd quinzena, not a fresh one.
+  const d = Number(dataISO.split('-')[2]);
+  return (d >= state.unimedP1Dia && d < state.unimedP2Dia) ? "1-15" : "16-30";
 }
 function computeDataPagamento(at){
   const key = at.convenio + "_" + at.tipo_servico;
@@ -117,7 +112,7 @@ async function init(){
   const statusDot = document.getElementById('statusDot');
   const statusText = document.getElementById('statusText');
   try{
-    await Promise.all([refreshAtendimentos(), refreshProtocolosData(), refreshParametros(), refreshUnimedCortes(), refreshConfig()]);
+    await Promise.all([refreshAtendimentos(), refreshProtocolosData(), refreshParametros(), refreshConfig()]);
     statusDot.classList.remove('off');
     statusText.textContent = 'sincronizado';
   } catch(err){
@@ -129,7 +124,6 @@ async function init(){
   supabaseClient.channel('atendimentos-changes').on('postgres_changes', {event:'*', schema:'public', table:'atendimentos'}, refreshAtendimentos).subscribe();
   supabaseClient.channel('protocolos-changes').on('postgres_changes', {event:'*', schema:'public', table:'protocolos'}, refreshProtocolosData).subscribe();
   supabaseClient.channel('parametros-changes').on('postgres_changes', {event:'*', schema:'public', table:'parametros'}, refreshParametros).subscribe();
-  supabaseClient.channel('unimed-cortes-changes').on('postgres_changes', {event:'*', schema:'public', table:'unimed_cortes'}, refreshUnimedCortes).subscribe();
   supabaseClient.channel('config-changes').on('postgres_changes', {event:'*', schema:'public', table:'config'}, refreshConfig).subscribe();
 }
 
@@ -360,8 +354,24 @@ let vinculacao = null; // {protocoloId, convenio, mes}
 let editingProtocolo = null; // id of the protocolo whose número/valor informado is being edited
 
 function pendentesDoGrupo(convenio, mes){
-  return ativos().filter(a=>a.convenio===convenio && monthKey(a.data)===mes && !a.protocolo_id)
-    .sort((a,b)=> a.data.localeCompare(b.data));
+  const base = ativos().filter(a=>a.convenio===convenio && !a.protocolo_id);
+  let items;
+  if(convenio === 'UNIMED'){
+    // The 2nd quinzena spills into the next calendar month (e.g. 21-4), so "August" for Unimed
+    // means: August's own days from unimedP1Dia onward, PLUS September's days before unimedP1Dia
+    // (that spillover tail). Days in August before unimedP1Dia belong to JULY's 2nd quinzena instead.
+    const proxMes = addMonths(mes, 1);
+    items = base.filter(a=>{
+      const mk = monthKey(a.data);
+      const d = Number(a.data.split('-')[2]);
+      if(mk === mes) return d >= state.unimedP1Dia;
+      if(mk === proxMes) return d < state.unimedP1Dia;
+      return false;
+    });
+  } else {
+    items = base.filter(a=> monthKey(a.data)===mes);
+  }
+  return items.sort((a,b)=> a.data.localeCompare(b.data));
 }
 
 function checklistRowHtml(a){
@@ -382,15 +392,14 @@ function renderCheckListVinculacao(){
   const list = document.getElementById('protCheckList');
   const quinzenaWrap = document.getElementById('vincularQuinzenaWrap');
 
-  let corte, ultimoDia;
+  const p1 = state.unimedP1Dia, p2 = state.unimedP2Dia;
+  const label1 = `Dia ${p1}–${p2-1}`;
+  const label2 = `Dia ${p2}–${p1-1} (mês seguinte)`;
   if(convenio === 'UNIMED'){
     quinzenaWrap.hidden = false;
-    const [y,m] = mes.split('-').map(Number);
-    corte = corteDoMes(mes);
-    ultimoDia = daysInMonth(y,m);
     const sel = document.getElementById('vincularQuinzena');
     const current = sel.value;
-    sel.innerHTML = `<option value="">Todas</option><option value="1-15">Dia 1–${corte}</option><option value="16-30">Dia ${corte+1}–${ultimoDia}</option>`;
+    sel.innerHTML = `<option value="">Todas</option><option value="1-15">${label1}</option><option value="16-30">${label2}</option>`;
     if(current === '1-15' || current === '16-30') sel.value = current;
     const quinzenaFiltro = sel.value;
     if(quinzenaFiltro) pendentes = pendentes.filter(a=> quinzenaOf(a.data) === quinzenaFiltro);
@@ -404,8 +413,8 @@ function renderCheckListVinculacao(){
     const primeira = pendentes.filter(a=> quinzenaOf(a.data)==='1-15');
     const segunda = pendentes.filter(a=> quinzenaOf(a.data)==='16-30');
     list.innerHTML =
-      (primeira.length ? `<div class="filter-label" style="margin:4px 0">Dia 1–${corte} (${primeira.length})</div>${primeira.map(checklistRowHtml).join('')}` : '') +
-      (segunda.length ? `<div class="filter-label" style="margin:8px 0 4px">Dia ${corte+1}–${ultimoDia} (${segunda.length})</div>${segunda.map(checklistRowHtml).join('')}` : '');
+      (primeira.length ? `<div class="filter-label" style="margin:4px 0">${label1} (${primeira.length})</div>${primeira.map(checklistRowHtml).join('')}` : '') +
+      (segunda.length ? `<div class="filter-label" style="margin:8px 0 4px">${label2} (${segunda.length})</div>${segunda.map(checklistRowHtml).join('')}` : '');
   } else {
     list.innerHTML = pendentes.map(checklistRowHtml).join('');
   }
@@ -851,6 +860,8 @@ function renderRelatorio(){
 const TIPO_LABEL = {CONSULTA:'Consulta', EXAME:'Exame'};
 function renderParametros(){
   document.getElementById('fRepasse').value = Math.round(state.repasseMariana*100);
+  document.getElementById('fUnimedP1').value = state.unimedP1Dia;
+  document.getElementById('fUnimedP2').value = state.unimedP2Dia;
 
   const tbody = document.getElementById('tblParametros');
   const keys = Object.keys(state.parametros).sort();
@@ -860,7 +871,7 @@ function renderParametros(){
     return `<tr>
       <td>${CONVENIO_LABEL[p.convenio]||p.convenio}</td><td>${TIPO_LABEL[p.tipo_servico]||p.tipo_servico}</td>
       <td><input type="number" style="width:70px" data-atr="${key}" value="${p.atraso_meses ?? 0}"></td>
-      <td>${isUnimed ? '<span class="pill neutral">fixo: dia 15 / último dia do mês</span>' : `<input type="number" style="width:70px" data-dia="${key}" value="${p.dia_pagamento ?? ''}">`}</td>
+      <td>${isUnimed ? '<span class="pill neutral">fixo: dia 15 (1ª) / último dia do mês (2ª)</span>' : `<input type="number" style="width:70px" data-dia="${key}" value="${p.dia_pagamento ?? ''}">`}</td>
       <td><button class="btn secondary" data-savepar="${key}">Salvar</button></td>
     </tr>`;
   }).join('');
@@ -877,31 +888,22 @@ function renderParametros(){
     }
   }));
 
-  const utbody = document.getElementById('tblUnimedPrazos');
-  const umeses = Object.keys(state.unimedCortes).sort();
-  utbody.innerHTML = umeses.map(mes=>{
-    const corte = state.unimedCortes[mes];
-    const [y,m] = mes.split('-').map(Number);
-    const ultimoDia = daysInMonth(y,m);
-    return `<tr>
-      <td>${monthLabel(mes)}</td>
-      <td><input type="number" style="width:70px" min="1" max="${ultimoDia}" data-corte="${mes}" value="${corte}"></td>
-      <td class="hint" style="margin:0">1ª: dia 1–${corte} (paga dia 15) · 2ª: dia ${corte+1}–${ultimoDia} (paga no último dia do mês)</td>
-      <td><button class="btn secondary" data-saveu="${mes}">Salvar</button></td>
-    </tr>`;
-  }).join('');
-  utbody.querySelectorAll('[data-saveu]').forEach(btn=> btn.addEventListener('click', async ()=>{
-    const mes = btn.dataset.saveu;
-    const corte = parseInt(document.querySelector(`[data-corte="${mes}"]`).value,10);
-    if(!corte || corte<1 || corte>31) return;
-    try{
-      await sbUpdate('unimed_cortes', 'mes', mes, {dia_corte: corte});
-      btn.textContent = 'Salvo ✓'; setTimeout(()=>btn.textContent='Salvar', 1200);
-    } catch(err){
-      alert('Não foi possível salvar (' + (err && err.message || 'erro') + '). Tente novamente.');
-    }
-  }));
 }
+document.getElementById('btnSalvarUnimedQuinzenas').addEventListener('click', async ()=>{
+  const p1 = parseInt(document.getElementById('fUnimedP1').value, 10);
+  const p2 = parseInt(document.getElementById('fUnimedP2').value, 10);
+  if(!p1 || !p2 || p1<1 || p1>31 || p2<1 || p2>31 || p1>=p2){ alert('Informem dois dias válidos, com o início da 1ª quinzena antes do início da 2ª.'); return; }
+  const btn = document.getElementById('btnSalvarUnimedQuinzenas');
+  const originalText = btn.textContent;
+  btn.disabled = true; btn.textContent = 'Salvando…';
+  try{
+    await sbUpdate('config', 'id', 1, {unimed_p1_dia: p1, unimed_p2_dia: p2});
+  } catch(err){
+    alert('Não foi possível salvar (' + (err && err.message || 'erro') + '). Tente novamente.');
+  } finally {
+    btn.disabled = false; btn.textContent = originalText;
+  }
+});
 document.getElementById('btnSalvarRepasse').addEventListener('click', async ()=>{
   const pct = parseFloat(document.getElementById('fRepasse').value);
   if(isNaN(pct)) return;

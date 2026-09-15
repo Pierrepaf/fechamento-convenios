@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Fechamento Convênios</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="styles.css?v=20260913y">
+<link rel="stylesheet" href="styles.css?v=20260914a">
 </head>
 <body>
 
@@ -303,7 +303,7 @@
 
       <div class="card card-pad">
         <h2>Prazos por convênio</h2>
-        <p class="hint">Quantos meses depois do atendimento o convênio paga, e em qual dia. Unimed também paga em dia fixo (dia 15 na 1ª quinzena, último dia do mês na 2ª) — mas qual quinzena cada atendimento cai depende do corte de cada mês, configurado na tabela abaixo.</p>
+        <p class="hint">Quantos meses depois do atendimento o convênio paga, e em qual dia. Unimed também paga em dia fixo (dia 15 na 1ª quinzena, último dia do mês na 2ª) — as duas quinzenas do mês estão configuradas logo abaixo.</p>
         <div class="table-wrap">
           <table>
             <thead><tr><th>Convênio</th><th>Tipo</th><th>Atraso (meses)</th><th>Dia do pagamento</th><th></th></tr></thead>
@@ -313,13 +313,12 @@
       </div>
 
       <div class="card card-pad">
-        <h2>Corte das quinzenas da Unimed por mês</h2>
-        <p class="hint">O pagamento em si é sempre no dia 15 (1ª quinzena) e no último dia do mês (2ª quinzena) — isso é fixo. O que muda mês a mês é até que dia a 1ª quinzena vai (o "corte"); atualizem aqui assim que souberem o calendário real de cada mês.</p>
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th>Mês de atendimento</th><th>Dia de corte</th><th>Períodos</th><th></th></tr></thead>
-            <tbody id="tblUnimedPrazos"></tbody>
-          </table>
+        <h2>Quinzenas da Unimed</h2>
+        <p class="hint">Padrão fixo, igual todo mês: a 1ª quinzena começa no dia abaixo e vai até o dia antes do início da 2ª; a 2ª quinzena começa no seu dia e segue até o dia antes do início da 1ª — já no mês seguinte.</p>
+        <div class="toolbar" style="align-items:flex-end">
+          <div class="field"><label>Início da 1ª quinzena (dia)</label><input type="number" step="1" min="1" max="31" id="fUnimedP1"></div>
+          <div class="field"><label>Início da 2ª quinzena (dia)</label><input type="number" step="1" min="1" max="31" id="fUnimedP2"></div>
+          <button class="btn" id="btnSalvarUnimedQuinzenas">Salvar</button>
         </div>
       </div>
     </section>
@@ -328,7 +327,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=20260913y"></script>
-<script src="app.js?v=20260913y"></script>
+<script src="config.js?v=20260914a"></script>
+<script src="app.js?v=20260914a"></script>
 </body>
 </html>
