@@ -146,6 +146,35 @@ document.getElementById('nav').addEventListener('click', e=>{
   document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active', v.id === 'view-'+btn.dataset.view));
 });
 
+// ---------------- Área restrita (Relatório / Parâmetros) ----------------
+const SENHA_AREA_RESTRITA = "1234"; // troque aqui se quiser outra senha — vale para Relatório e Parâmetros
+function areaDesbloqueada(){
+  return localStorage.getItem('iosa_desbloqueado') === 'sim';
+}
+function aplicarBloqueio(){
+  const ok = areaDesbloqueada();
+  document.querySelectorAll('.pin-gate').forEach(g=> g.hidden = ok);
+  document.querySelectorAll('.protected-content').forEach(c=> c.hidden = !ok);
+}
+document.querySelectorAll('.pin-gate').forEach(gate=>{
+  const input = gate.querySelector('.pin-input');
+  const err = gate.querySelector('.pin-error');
+  const tentar = ()=>{
+    if(input.value === SENHA_AREA_RESTRITA){
+      localStorage.setItem('iosa_desbloqueado', 'sim');
+      err.style.display = 'none';
+      aplicarBloqueio();
+    } else {
+      err.style.display = 'block';
+      input.value = '';
+      input.focus();
+    }
+  };
+  gate.querySelector('.pin-submit').addEventListener('click', tentar);
+  input.addEventListener('keydown', e=>{ if(e.key==='Enter') tentar(); });
+});
+aplicarBloqueio();
+
 // ---------------- Lançamentos ----------------
 const PROCEDIMENTOS_EXAME = ["TONO","RETINO","MR","TOPO","PAQUI","BIO","GONIO","US","T. SCHIRMER"];
 let editingId = null;

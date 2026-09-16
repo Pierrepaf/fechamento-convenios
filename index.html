@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Fechamento Convênios</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="styles.css?v=20260914b">
+<link rel="stylesheet" href="styles.css?v=20260915a">
 </head>
 <body>
 
@@ -202,6 +202,17 @@
         </div>
       </div>
 
+      <div class="pin-gate card card-pad" style="max-width:360px; margin:24px auto">
+        <h2 style="margin-bottom:2px">Área restrita</h2>
+        <p class="hint">Só Lenice e Mariana — digite a senha para continuar.</p>
+        <div class="toolbar" style="align-items:flex-end; margin-top:10px">
+          <div class="field" style="flex:1"><label>Senha</label><input type="password" class="pin-input"></div>
+          <button class="btn pin-submit">Entrar</button>
+        </div>
+        <p class="pin-error diff-bad" style="display:none; margin:8px 0 0">Senha incorreta.</p>
+      </div>
+
+      <div class="protected-content" hidden>
       <h2 style="margin:0 0 4px">Quanto ainda vou receber</h2>
       <p class="hint" style="margin:0 0 14px">Com base no que já foi lançado — vale mesmo que ainda não tenha entrado em nenhum protocolo.</p>
       <div class="acao-grid" id="kpis"></div>
@@ -281,6 +292,7 @@
           <div class="table-wrap" id="tblDetalhe"></div>
         </div>
       </div>
+      </div>
     </section>
 
     <!-- ================= PARÂMETROS ================= -->
@@ -292,6 +304,17 @@
         </div>
       </div>
 
+      <div class="pin-gate card card-pad" style="max-width:360px; margin:24px auto">
+        <h2 style="margin-bottom:2px">Área restrita</h2>
+        <p class="hint">Só Lenice e Mariana — digite a senha para continuar.</p>
+        <div class="toolbar" style="align-items:flex-end; margin-top:10px">
+          <div class="field" style="flex:1"><label>Senha</label><input type="password" class="pin-input"></div>
+          <button class="btn pin-submit">Entrar</button>
+        </div>
+        <p class="pin-error diff-bad" style="display:none; margin:8px 0 0">Senha incorreta.</p>
+      </div>
+
+      <div class="protected-content" hidden>
       <div class="card card-pad">
         <h2>Repasse da Mariana para a clínica</h2>
         <p class="hint">Percentual descontado de tudo que a Mariana fatura (não se aplica à Lenice).</p>
@@ -321,13 +344,14 @@
           <button class="btn" id="btnSalvarUnimedQuinzenas">Salvar</button>
         </div>
       </div>
+      </div>
     </section>
 
   </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=20260914b"></script>
-<script src="app.js?v=20260914b"></script>
+<script src="config.js?v=20260915a"></script>
+<script src="app.js?v=20260915a"></script>
 </body>
 </html>
