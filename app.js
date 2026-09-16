@@ -818,7 +818,7 @@ function renderRelatorio(){
   // work done this month can still land 2 months out — this was the bug: only 2 months were shown).
   const maxAtraso = Math.max(0, ...Object.values(state.parametros).map(p=> p.atraso_meses||0));
   const nMesesKpi = maxAtraso + 1;
-  let leniceSoma = 0, marianaLiquidoSoma = 0, repasseSoma = 0;
+  let leniceSoma = 0, marianaLiquidoSoma = 0, repasseSoma = 0, marianaBrutoSoma = 0;
   const leniceRows = [], marianaRows = [];
   for(let i=0; i<nMesesKpi; i++){
     const mLabel = monthLabel(geral[i].mes);
@@ -826,29 +826,39 @@ function renderRelatorio(){
     const marianaV = marianaBruto[i].total;
     const repasseV = marianaV * state.repasseMariana;
     const marianaLiqV = marianaV - repasseV;
-    leniceSoma += leniceV; marianaLiquidoSoma += marianaLiqV; repasseSoma += repasseV;
-    leniceRows.push({label: mLabel, val: fmtBRL(leniceV)});
-    marianaRows.push({label: mLabel, val: fmtBRL(marianaLiqV)});
+    leniceSoma += leniceV; marianaLiquidoSoma += marianaLiqV; repasseSoma += repasseV; marianaBrutoSoma += marianaV;
+    leniceRows.push({mes: mLabel, propria: leniceV, repasse: repasseV, total: leniceV + repasseV});
+    marianaRows.push({mes: mLabel, bruto: marianaV, repasse: repasseV, liquido: marianaLiqV});
   }
-  leniceRows.push({label: `${pct}% de Mariana`, val: fmtBRL(repasseSoma)});
-  marianaRows.push({label: `Repasse (${pct}%)`, val: '-'+fmtBRL(repasseSoma), cls: 'diff-bad'});
   const leniceTotal = leniceSoma + repasseSoma;
   const marianaTotal = marianaLiquidoSoma;
-  const kpiCard = (nome, total, rows) => `
+  const leniceTable = `
+    <table>
+      <thead><tr><th>Mês</th><th class="right">Trabalho próprio</th><th class="right">${pct}% de Mariana</th><th class="right">Total</th></tr></thead>
+      <tbody>
+        ${leniceRows.map(r=>`<tr><td>${r.mes}</td><td class="right num">${fmtBRL(r.propria)}</td><td class="right num">${fmtBRL(r.repasse)}</td><td class="right num" style="font-weight:600">${fmtBRL(r.total)}</td></tr>`).join('')}
+      </tbody>
+      <tfoot><tr style="border-top:2px solid var(--border)"><td style="font-weight:600">Total</td><td class="right num" style="font-weight:600">${fmtBRL(leniceSoma)}</td><td class="right num" style="font-weight:600">${fmtBRL(repasseSoma)}</td><td class="right num" style="font-weight:700">${fmtBRL(leniceTotal)}</td></tr></tfoot>
+    </table>`;
+  const marianaTable = `
+    <table>
+      <thead><tr><th>Mês</th><th class="right">Bruto (trabalho)</th><th class="right">Repasse (${pct}%)</th><th class="right">Líquido</th></tr></thead>
+      <tbody>
+        ${marianaRows.map(r=>`<tr><td>${r.mes}</td><td class="right num">${fmtBRL(r.bruto)}</td><td class="right num diff-bad">-${fmtBRL(r.repasse)}</td><td class="right num" style="font-weight:600">${fmtBRL(r.liquido)}</td></tr>`).join('')}
+      </tbody>
+      <tfoot><tr style="border-top:2px solid var(--border)"><td style="font-weight:600">Total</td><td class="right num" style="font-weight:600">${fmtBRL(marianaBrutoSoma)}</td><td class="right num diff-bad" style="font-weight:600">-${fmtBRL(repasseSoma)}</td><td class="right num" style="font-weight:700">${fmtBRL(marianaTotal)}</td></tr></tfoot>
+    </table>`;
+  const kpiCard = (nome, total, tableHtml) => `
     <div class="card">
       <div class="card-pad">
         <h2>${nome}</h2>
         <div class="value num" style="font-size:30px; font-weight:700; line-height:1.15; margin-top:6px">${fmtBRL(total)}</div>
-        <div style="display:flex; flex-direction:column; gap:7px; margin-top:14px; padding-top:12px; border-top:1px solid var(--border)">
-          ${rows.map(r=>`<div style="display:flex; justify-content:space-between; gap:12px">
-            <span style="color:var(--ink-soft)">${r.label}</span><span class="num ${r.cls||''}">${r.val}</span>
-          </div>`).join('')}
-        </div>
+        <div class="table-wrap" style="margin-top:14px; padding-top:12px; border-top:1px solid var(--border)">${tableHtml}</div>
       </div>
     </div>`;
   kpis.innerHTML =
-    kpiCard('Lenice', leniceTotal, leniceRows) +
-    kpiCard('Mariana', marianaTotal, marianaRows);
+    kpiCard('Lenice', leniceTotal, leniceTable) +
+    kpiCard('Mariana', marianaTotal, marianaTable);
 
   const pend = state.protocolos.filter(p=>!p.recebido && !p.arquivado).map(p=>({...p, ...protoAggregates(p.id)}))
     .sort((a,b)=> (a.dataPagamento||'9999').localeCompare(b.dataPagamento||'9999'));
