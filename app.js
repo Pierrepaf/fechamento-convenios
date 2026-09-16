@@ -147,7 +147,7 @@ document.getElementById('nav').addEventListener('click', e=>{
 });
 
 // ---------------- Área restrita (Relatório / Parâmetros) ----------------
-const SENHA_AREA_RESTRITA = "1234"; // troque aqui se quiser outra senha — vale para Relatório e Parâmetros
+const SENHA_AREA_RESTRITA = "2022"; // troque aqui se quiser outra senha — vale para Relatório e Parâmetros
 function areaDesbloqueada(){
   return localStorage.getItem('iosa_desbloqueado') === 'sim';
 }
