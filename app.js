@@ -812,17 +812,28 @@ function renderRelatorio(){
   renderDetalheTable(document.getElementById('tblDetalhe'), detalhe);
 
   const kpis = document.getElementById('kpis');
-  const mesAtual = geral[0], mesProximo = geral[1];
   const pct = Math.round(state.repasseMariana*100);
-  const marianaThis = marianaBruto[0].total, marianaNext = marianaBruto[1].total;
-  const repasseThis = marianaThis * state.repasseMariana;
-  const repasseNext = marianaNext * state.repasseMariana;
-  const repasse2m = repasseThis + repasseNext;
-  const marianaLiquidoThis = marianaThis - repasseThis;
-  const marianaLiquidoNext = marianaNext - repasseNext;
-  const leniceThis = lenice[0].total, leniceNext = lenice[1].total;
-  const leniceTotal = leniceThis + leniceNext + repasse2m;
-  const marianaTotal = marianaLiquidoThis + marianaLiquidoNext;
+  // Look ahead as many months as the slowest-paying convênio needs, so nothing this month's work
+  // is owed for ever silently falls outside the window (e.g. a 2-month delay means money from
+  // work done this month can still land 2 months out — this was the bug: only 2 months were shown).
+  const maxAtraso = Math.max(0, ...Object.values(state.parametros).map(p=> p.atraso_meses||0));
+  const nMesesKpi = maxAtraso + 1;
+  let leniceSoma = 0, marianaLiquidoSoma = 0, repasseSoma = 0;
+  const leniceRows = [], marianaRows = [];
+  for(let i=0; i<nMesesKpi; i++){
+    const mLabel = monthLabel(geral[i].mes);
+    const leniceV = lenice[i].total;
+    const marianaV = marianaBruto[i].total;
+    const repasseV = marianaV * state.repasseMariana;
+    const marianaLiqV = marianaV - repasseV;
+    leniceSoma += leniceV; marianaLiquidoSoma += marianaLiqV; repasseSoma += repasseV;
+    leniceRows.push({label: mLabel, val: fmtBRL(leniceV)});
+    marianaRows.push({label: mLabel, val: fmtBRL(marianaLiqV)});
+  }
+  leniceRows.push({label: `${pct}% de Mariana`, val: fmtBRL(repasseSoma)});
+  marianaRows.push({label: `Repasse (${pct}%)`, val: '-'+fmtBRL(repasseSoma), cls: 'diff-bad'});
+  const leniceTotal = leniceSoma + repasseSoma;
+  const marianaTotal = marianaLiquidoSoma;
   const kpiCard = (nome, total, rows) => `
     <div class="card">
       <div class="card-pad">
@@ -836,16 +847,8 @@ function renderRelatorio(){
       </div>
     </div>`;
   kpis.innerHTML =
-    kpiCard('Lenice', leniceTotal, [
-      {label: monthLabel(mesAtual.mes), val: fmtBRL(leniceThis)},
-      {label: monthLabel(mesProximo.mes), val: fmtBRL(leniceNext)},
-      {label: `${pct}% de Mariana`, val: fmtBRL(repasse2m)},
-    ]) +
-    kpiCard('Mariana', marianaTotal, [
-      {label: monthLabel(mesAtual.mes), val: fmtBRL(marianaLiquidoThis)},
-      {label: monthLabel(mesProximo.mes), val: fmtBRL(marianaLiquidoNext)},
-      {label: `Repasse (${pct}%)`, val: '-'+fmtBRL(repasse2m), cls: 'diff-bad'},
-    ]);
+    kpiCard('Lenice', leniceTotal, leniceRows) +
+    kpiCard('Mariana', marianaTotal, marianaRows);
 
   const pend = state.protocolos.filter(p=>!p.recebido && !p.arquivado).map(p=>({...p, ...protoAggregates(p.id)}))
     .sort((a,b)=> (a.dataPagamento||'9999').localeCompare(b.dataPagamento||'9999'));
