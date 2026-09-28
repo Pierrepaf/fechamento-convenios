@@ -146,22 +146,29 @@ document.getElementById('nav').addEventListener('click', e=>{
   document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active', v.id === 'view-'+btn.dataset.view));
 });
 
-// ---------------- Área restrita (Relatório / Parâmetros) ----------------
-const SENHA_AREA_RESTRITA = "2022"; // troque aqui se quiser outra senha — vale para Relatório e Parâmetros
-function areaDesbloqueada(){
-  return localStorage.getItem('iosa_desbloqueado') === 'sim';
+// ---------------- Controle de acesso (por senha, sem login de verdade) ----------------
+// "restrita" = Relatório/Parâmetros (só Lenice e Mariana). "secretaria" = Lançamentos/Protocolos
+// (secretárias também). A senha da Lenice/Mariana é senha mestra: ela libera as duas.
+const SENHAS_TIER = { restrita: "2022", secretaria: "5050" };
+const SENHA_MESTRA = "2022"; // troque aqui se quiser outra senha mestra
+function tierDesbloqueado(tier){
+  return localStorage.getItem('iosa_desbloqueado_'+tier) === 'sim';
 }
 function aplicarBloqueio(){
-  const ok = areaDesbloqueada();
-  document.querySelectorAll('.pin-gate').forEach(g=> g.hidden = ok);
-  document.querySelectorAll('.protected-content').forEach(c=> c.hidden = !ok);
+  document.querySelectorAll('.pin-gate').forEach(g=> g.hidden = tierDesbloqueado(g.dataset.tier));
+  document.querySelectorAll('.protected-content').forEach(c=> c.hidden = !tierDesbloqueado(c.dataset.tier));
 }
 document.querySelectorAll('.pin-gate').forEach(gate=>{
+  const tier = gate.dataset.tier;
   const input = gate.querySelector('.pin-input');
   const err = gate.querySelector('.pin-error');
   const tentar = ()=>{
-    if(input.value === SENHA_AREA_RESTRITA){
-      localStorage.setItem('iosa_desbloqueado', 'sim');
+    if(input.value === SENHA_MESTRA){
+      Object.keys(SENHAS_TIER).forEach(t=> localStorage.setItem('iosa_desbloqueado_'+t, 'sim'));
+      err.style.display = 'none';
+      aplicarBloqueio();
+    } else if(input.value === SENHAS_TIER[tier]){
+      localStorage.setItem('iosa_desbloqueado_'+tier, 'sim');
       err.style.display = 'none';
       aplicarBloqueio();
     } else {
