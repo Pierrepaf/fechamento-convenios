@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Fechamento Convênios</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="styles.css?v=20261004a">
+<link rel="stylesheet" href="styles.css?v=20261004b">
 </head>
 <body>
 
@@ -143,7 +143,8 @@
             <div class="field"><label>Convênio</label>
               <select id="protFiltroConvenio"><option value="">Todos</option>
                 <option value="AMIL">Amil</option><option value="BRADESCO">Bradesco</option>
-                <option value="PORTO_SEGURO">Porto Seguro</option><option value="UNIMED">Unimed</option><option value="PETROBRAS">Petrobras</option>
+                <option value="PORTO_SEGURO">Porto Seguro</option><option value="UNIMED">Unimed</option>
+                <!-- Petrobras ainda não aparece aqui de propósito: protocolo/fechamento ainda não definido, ver CONVENIOS_SEM_PROTOCOLO_AINDA em app.js -->
               </select>
             </div>
             <div class="field"><label>Mês de atendimento</label><select id="protFiltroMes"><option value="">Todos</option></select></div>
@@ -167,7 +168,8 @@
               <select id="protNovoConvenio">
                 <option value="">Selecione…</option>
                 <option value="AMIL">Amil</option><option value="BRADESCO">Bradesco</option>
-                <option value="PORTO_SEGURO">Porto Seguro</option><option value="UNIMED">Unimed</option><option value="PETROBRAS">Petrobras</option>
+                <option value="PORTO_SEGURO">Porto Seguro</option><option value="UNIMED">Unimed</option>
+                <!-- Petrobras ainda não aparece aqui de propósito: protocolo/fechamento ainda não definido, ver CONVENIOS_SEM_PROTOCOLO_AINDA em app.js -->
               </select>
             </div>
             <div class="field"><label>Mês de atendimento</label><select id="protNovoMes"><option value="">Selecione…</option></select></div>
@@ -375,7 +377,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=20261004a"></script>
-<script src="app.js?v=20261004a"></script>
+<script src="config.js?v=20261004b"></script>
+<script src="app.js?v=20261004b"></script>
 </body>
 </html>

@@ -1,5 +1,10 @@
 const CONVENIOS = ["AMIL","BRADESCO","PORTO_SEGURO","UNIMED","PETROBRAS","PARTICULAR"];
 const CONVENIO_LABEL = {AMIL:"Amil", BRADESCO:"Bradesco", PORTO_SEGURO:"Porto Seguro", UNIMED:"Unimed", PETROBRAS:"Petrobras", PARTICULAR:"Particular"};
+// Convênios reais que ainda não têm o processo de protocolo/fechamento definido — seus lançamentos
+// contam no "quanto vou receber" normalmente, mas não devem aparecer nos alertas de "sem protocolo"
+// nem no seletor de novo protocolo, senão viraria um alarme sobre algo que ainda não dá pra resolver.
+// Remova o convênio daqui assim que o processo de protocolo dele estiver definido.
+const CONVENIOS_SEM_PROTOCOLO_AINDA = ["PETROBRAS"];
 const fmtBRL = v => (v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 const cleanMoney = v => Math.abs(v) < 0.005 ? 0 : v; // avoids "-R$0,00" from floating-point noise on near-zero diffs
 const pad2 = n => String(n).padStart(2,'0');
@@ -563,7 +568,7 @@ function renderProtocolos(){
     .sort((a,b)=> b.mes.localeCompare(a.mes) || a.convenio.localeCompare(b.convenio) || a.numero.localeCompare(b.numero));
 
   const semProtocolo = ativos().filter(a=>
-    a.convenio !== 'PARTICULAR' && !a.protocolo_id &&
+    a.convenio !== 'PARTICULAR' && !CONVENIOS_SEM_PROTOCOLO_AINDA.includes(a.convenio) && !a.protocolo_id &&
     (!convenioFiltro || a.convenio===convenioFiltro) && (!mesFiltro || mesLogicoDoAtendimento(a)===mesFiltro)
   );
   const semProtocoloValor = semProtocolo.reduce((s,a)=>s+a.valor,0);
@@ -756,7 +761,7 @@ function computeSemProtocolo(){
   const hoje = todayMonthKey();
   const grupos = {};
   ativos().forEach(a=>{
-    if(a.convenio === 'PARTICULAR' || a.protocolo_id) return;
+    if(a.convenio === 'PARTICULAR' || CONVENIOS_SEM_PROTOCOLO_AINDA.includes(a.convenio) || a.protocolo_id) return;
     const mk = mesLogicoDoAtendimento(a);
     if(mk >= hoje) return; // mes ainda em andamento - nao e alarme
     const key = a.convenio + '|' + mk;
