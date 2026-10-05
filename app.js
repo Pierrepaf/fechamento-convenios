@@ -1,5 +1,5 @@
-const CONVENIOS = ["AMIL","BRADESCO","PORTO_SEGURO","UNIMED","PARTICULAR"];
-const CONVENIO_LABEL = {AMIL:"Amil", BRADESCO:"Bradesco", PORTO_SEGURO:"Porto Seguro", UNIMED:"Unimed", PARTICULAR:"Particular"};
+const CONVENIOS = ["AMIL","BRADESCO","PORTO_SEGURO","UNIMED","PETROBRAS","PARTICULAR"];
+const CONVENIO_LABEL = {AMIL:"Amil", BRADESCO:"Bradesco", PORTO_SEGURO:"Porto Seguro", UNIMED:"Unimed", PETROBRAS:"Petrobras", PARTICULAR:"Particular"};
 const fmtBRL = v => (v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 const cleanMoney = v => Math.abs(v) < 0.005 ? 0 : v; // avoids "-R$0,00" from floating-point noise on near-zero diffs
 const pad2 = n => String(n).padStart(2,'0');
