@@ -31,6 +31,7 @@ let state = {
   parametros: {},    // chave -> {atraso_meses, dia_pagamento}
   unimedP1Dia: 5,    // day the 1st quinzena starts each month (fixed pattern, same every month)
   unimedP2Dia: 21,   // day the 2nd quinzena starts each month; 2nd quinzena runs until unimedP1Dia-1 of the NEXT month
+  petrobrasCorteDia: 20, // day a new Petrobras monthly cycle starts; cycle runs until petrobrasCorteDia-1 of the NEXT month
   repasseMariana: 0.30,
 };
 
@@ -80,6 +81,7 @@ async function refreshConfig(){
     state.repasseMariana = Number(rows[0].repasse_mariana);
     if(rows[0].unimed_p1_dia !== null && rows[0].unimed_p1_dia !== undefined) state.unimedP1Dia = Number(rows[0].unimed_p1_dia);
     if(rows[0].unimed_p2_dia !== null && rows[0].unimed_p2_dia !== undefined) state.unimedP2Dia = Number(rows[0].unimed_p2_dia);
+    if(rows[0].petrobras_corte_dia !== null && rows[0].petrobras_corte_dia !== undefined) state.petrobrasCorteDia = Number(rows[0].petrobras_corte_dia);
   }
   renderAll();
 }
@@ -93,22 +95,28 @@ function quinzenaOf(dataISO){
   return (d >= state.unimedP1Dia && d < state.unimedP2Dia) ? "1-15" : "16-30";
 }
 function mesLogicoDoAtendimento(a){
-  // Which convênio/mês group an atendimento belongs to for protocolo purposes. For everyone
-  // except Unimed this is just its own calendar month. For Unimed, a day before unimedP1Dia is
-  // really the tail of the PREVIOUS month's 2nd quinzena (e.g. Sep 1-4 belongs to "August"),
-  // so it must be grouped there instead — this is the one place that decides that, so every
+  // Which convênio/mês group an atendimento belongs to for billing-cycle purposes. For everyone
+  // except Unimed/Petrobras this is just its own calendar month. Both Unimed and Petrobras have a
+  // cycle that starts mid-month and runs into the next calendar month, so a day before the cutoff
+  // is really the tail of the PREVIOUS month's cycle (e.g. Unimed Sep 1-4 belongs to "August";
+  // Petrobras Nov 1-19 belongs to "October") — this is the one place that decides that, so every
   // "sem protocolo" count and the Protocolos linking screen can never disagree about it.
   const mk = monthKey(a.data);
-  if(a.convenio !== 'UNIMED') return mk;
   const d = Number(a.data.split('-')[2]);
-  return d < state.unimedP1Dia ? addMonths(mk, -1) : mk;
+  if(a.convenio === 'UNIMED') return d < state.unimedP1Dia ? addMonths(mk, -1) : mk;
+  if(a.convenio === 'PETROBRAS') return d < state.petrobrasCorteDia ? addMonths(mk, -1) : mk;
+  return mk;
 }
 function computeDataPagamento(at){
   const key = at.convenio + "_" + at.tipo_servico;
   const param = state.parametros[key];
   if(!param) return null;
-  const [y,m] = at.data.split('-').map(Number);
   if(param.atraso_meses === 0) return at.data;
+  // Petrobras's cycle crosses a calendar-month boundary (day 20 to day 19 of the next month), so the
+  // delay must be counted from the logical cycle month, not the raw visit date — otherwise a visit on
+  // Oct 31 and one on Nov 5 (same cycle, same real payment) would project a month apart.
+  const baseMes = at.convenio === 'PETROBRAS' ? mesLogicoDoAtendimento(at) : monthKey(at.data);
+  const [y,m] = baseMes.split('-').map(Number);
   const targetKey = addMonths(`${y}-${pad2(m)}`, param.atraso_meses);
   const [ty,tm] = targetKey.split('-').map(Number);
   let dia;
@@ -188,7 +196,7 @@ document.querySelectorAll('.pin-gate').forEach(gate=>{
 aplicarBloqueio();
 
 // ---------------- Lançamentos ----------------
-const PROCEDIMENTOS_EXAME = ["TONO","RETINO","MR","TOPO","PAQUI","BIO","GONIO","US","T. SCHIRMER"];
+const PROCEDIMENTOS_EXAME = ["TONO","RETINO","MR","TOPO","PAQUI","BIO","GONIO","US","T. SCHIRMER","TESTE DE CORES","TESTE ORTÓPTICO"];
 let editingId = null;
 
 function refreshProcedimentoOptions(){
