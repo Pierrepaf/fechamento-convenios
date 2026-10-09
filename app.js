@@ -3,8 +3,8 @@ const CONVENIO_LABEL = {AMIL:"Amil", BRADESCO:"Bradesco", PORTO_SEGURO:"Porto Se
 // Convênios reais que ainda não têm o processo de protocolo/fechamento definido — seus lançamentos
 // contam no "quanto vou receber" normalmente, mas não devem aparecer nos alertas de "sem protocolo"
 // nem no seletor de novo protocolo, senão viraria um alarme sobre algo que ainda não dá pra resolver.
-// Remova o convênio daqui assim que o processo de protocolo dele estiver definido.
-const CONVENIOS_SEM_PROTOCOLO_AINDA = ["PETROBRAS"];
+// Petrobras já tem o processo definido (fechamento dia 20/19) e foi removida daqui.
+const CONVENIOS_SEM_PROTOCOLO_AINDA = [];
 const fmtBRL = v => (v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 const cleanMoney = v => Math.abs(v) < 0.005 ? 0 : v; // avoids "-R$0,00" from floating-point noise on near-zero diffs
 const pad2 = n => String(n).padStart(2,'0');
