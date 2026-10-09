@@ -40,10 +40,17 @@ function numify(rows, fields){
   return rows;
 }
 
-async function sbSelect(table){
-  const { data, error } = await supabaseClient.from(table).select('*');
-  if(error) throw error;
-  return data;
+// Supabase returns at most 1000 rows per request, so read in pages until done.
+// Ordering by the primary key keeps pages stable (no row skipped or repeated).
+async function sbSelect(table, key='id'){
+  const PAGE = 1000;
+  let all = [];
+  for(let from = 0; ; from += PAGE){
+    const { data, error } = await supabaseClient.from(table).select('*').order(key).range(from, from + PAGE - 1);
+    if(error) throw error;
+    all = all.concat(data);
+    if(data.length < PAGE) return all;
+  }
 }
 async function sbInsert(table, row){
   const { data, error } = await supabaseClient.from(table).insert(row).select().single();
@@ -69,7 +76,7 @@ async function refreshProtocolosData(){
   renderAll();
 }
 async function refreshParametros(){
-  const rows = numify(await sbSelect('parametros'), []);
+  const rows = numify(await sbSelect('parametros', 'chave'), []);
   const p = {};
   rows.forEach(r => { p[r.chave] = r; });
   state.parametros = p;
