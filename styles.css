@@ -128,6 +128,9 @@ tbody tr:hover{background:var(--surface-2)}
 .who.MARIANA{background:var(--amber-tint); color:var(--amber)}
 .check-row .desc{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
 .check-row .val{flex:0 0 auto; font-variant-numeric:tabular-nums}
+.valor-edit{display:inline-flex; align-items:center; gap:6px; flex:0 0 auto}
+.valor-edit input{width:110px; padding:4px 8px}
+.valor-edit .btn{padding:4px 12px}
 
 .proto-card{border:1px solid var(--border); border-radius:10px; padding:14px 16px; margin-bottom:12px}
 .proto-card .top{display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; align-items:baseline}

@@ -419,6 +419,58 @@ function protoAggregates(protoId){
 let expandedProtocolos = new Set();
 let vinculacao = null; // {protocoloId, convenio, mes}
 let editingProtocolo = null; // id of the protocolo whose número/valor informado is being edited
+let editingValorId = null; // id of the lançamento whose valor is being corrected inline (Protocolos tab)
+
+// Price cell with a ✎ to correct a lançamento's valor without leaving the Protocolos tab.
+function valorEditHtml(a){
+  if(editingValorId === a.id) return `
+        <span class="valor-edit">
+          <input type="number" step="0.01" min="0" class="valorEditInput" data-valorinput="${a.id}" value="${a.valor}">
+          <button class="btn" data-valorsave="${a.id}">Salvar</button>
+          <button class="icon-btn" data-valorcancel="${a.id}" title="Cancelar">✕</button>
+        </span>`;
+  return `<span class="val">${fmtBRL(a.valor)}</span><button class="icon-btn" data-valoredit="${a.id}" title="Corrigir valor">✎</button>`;
+}
+function bindValorEdit(container, rerender){
+  container.querySelectorAll('[data-valoredit]').forEach(btn=> btn.addEventListener('click', e=>{
+    e.preventDefault(); e.stopPropagation();
+    editingValorId = btn.dataset.valoredit;
+    rerender();
+    const inp = container.querySelector(`[data-valorinput="${editingValorId}"]`);
+    if(inp){ inp.focus(); inp.select(); }
+  }));
+  container.querySelectorAll('[data-valorcancel]').forEach(btn=> btn.addEventListener('click', e=>{
+    e.preventDefault(); e.stopPropagation();
+    editingValorId = null;
+    rerender();
+  }));
+  container.querySelectorAll('.valorEditInput').forEach(inp=>{
+    blockNonNumeric(inp);
+    inp.addEventListener('click', e=> e.stopPropagation());
+    inp.addEventListener('keydown', e=>{
+      if(e.key==='Enter'){ e.preventDefault(); container.querySelector(`[data-valorsave="${inp.dataset.valorinput}"]`).click(); }
+      if(e.key==='Escape'){ e.preventDefault(); editingValorId = null; rerender(); }
+    });
+  });
+  container.querySelectorAll('[data-valorsave]').forEach(btn=> btn.addEventListener('click', async e=>{
+    e.preventDefault(); e.stopPropagation();
+    const id = btn.dataset.valorsave;
+    const valor = parseFloat(container.querySelector(`[data-valorinput="${id}"]`).value);
+    if(isNaN(valor) || valor < 0){ alert('Informe um valor válido.'); return; }
+    const originalText = btn.textContent;
+    btn.disabled = true; btn.textContent = 'Salvando…';
+    try{
+      await sbUpdate('atendimentos', 'id', id, { valor });
+      const a = state.atendimentos.find(x=>x.id===id);
+      if(a) a.valor = valor; // show it right away; the realtime refresh confirms it from the database
+      editingValorId = null;
+      renderAll();
+    } catch(err){
+      alert('Não foi possível salvar o valor (' + (err && err.message || 'erro') + '). Tente novamente.');
+      btn.disabled = false; btn.textContent = originalText;
+    }
+  }));
+}
 
 function pendentesDoGrupo(convenio, mes){
   return ativos()
@@ -432,7 +484,7 @@ function checklistRowHtml(a){
         <input type="checkbox" value="${a.id}" data-tipo="${a.tipo_servico}" class="protoChk">
         <span class="who ${a.medica}">${a.medica==='LENICE'?'Lenice':'Mariana'}</span>
         <span class="desc">${a.data.split('-').reverse().join('/')} · ${a.tipo_servico==='CONSULTA'?'Consulta':a.procedimento||'Exame'} · ${a.paciente||''}</span>
-        <span class="val num">${fmtBRL(a.valor)}</span>
+        ${valorEditHtml(a)}
       </label>`;
 }
 
@@ -442,6 +494,8 @@ function renderCheckListVinculacao(){
   const { convenio, mes } = vinculacao;
   let pendentes = pendentesDoGrupo(convenio, mes);
   const list = document.getElementById('protCheckList');
+  // Re-renders (realtime refresh, price correction) must not untick what the user already ticked
+  const marcados = new Set(Array.from(list.querySelectorAll('.protoChk:checked')).map(c=>c.value));
   const quinzenaWrap = document.getElementById('vincularQuinzenaWrap');
 
   const p1 = state.unimedP1Dia, p2 = state.unimedP2Dia;
@@ -470,7 +524,11 @@ function renderCheckListVinculacao(){
   } else {
     list.innerHTML = pendentes.map(checklistRowHtml).join('');
   }
-  list.querySelectorAll('.protoChk').forEach(c=> c.addEventListener('change', updateVincularBtn));
+  list.querySelectorAll('.protoChk').forEach(c=>{
+    if(marcados.has(c.value)) c.checked = true;
+    c.addEventListener('change', updateVincularBtn);
+  });
+  bindValorEdit(list, renderCheckListVinculacao);
   updateVincularBtn();
 }
 
@@ -648,7 +706,7 @@ function renderProtocolos(){
               <td>${it.paciente||''}</td>
               <td>${it.tipo_servico==='CONSULTA'?'Consulta':'Exame'}</td>
               <td>${it.procedimento||''}</td>
-              <td class="right num">${fmtBRL(it.valor)}</td>
+              <td class="right num" style="white-space:nowrap">${p.arquivado ? fmtBRL(it.valor) : valorEditHtml(it)}</td>
             </tr>`).join('')}</tbody>
           </table>
         </div>
@@ -679,6 +737,7 @@ function renderProtocolos(){
       catch(err){ alert('Não foi possível desarquivar (' + (err && err.message || 'erro') + '). Tente novamente.'); }
     }));
     listEl.querySelectorAll('.protoValorInf').forEach(inp=> blockNonNumeric(inp));
+    bindValorEdit(listEl, renderProtocolos);
     listEl.querySelectorAll('[data-editp]').forEach(btn=> btn.addEventListener('click', ()=>{
       editingProtocolo = btn.dataset.editp;
       renderProtocolos();
