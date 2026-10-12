@@ -1031,6 +1031,19 @@ function renderRelatorio(){
 
 // ---------------- Parâmetros ----------------
 const TIPO_LABEL = {CONSULTA:'Consulta', EXAME:'Exame'};
+// Parâmetros "Salvar" buttons: "Salvando…" while saving, then "Salvo ✓" for a moment.
+async function salvarComFeedback(btn, salvar){
+  btn.disabled = true; btn.textContent = 'Salvando…';
+  try{
+    await salvar();
+    btn.textContent = 'Salvo ✓';
+    setTimeout(()=>{ btn.textContent = 'Salvar'; btn.disabled = false; }, 1200);
+  } catch(err){
+    alert('Não foi possível salvar (' + (err && err.message || 'erro') + '). Tente novamente.');
+    btn.textContent = 'Salvar'; btn.disabled = false;
+  }
+}
+
 function renderParametros(){
   document.getElementById('fRepasse').value = Math.round(state.repasseMariana*100);
   document.getElementById('fUnimedP1').value = state.unimedP1Dia;
@@ -1053,12 +1066,7 @@ function renderParametros(){
     const atrasoMeses = parseInt(document.querySelector(`[data-atr="${key}"]`).value, 10) || 0;
     const diaInput = document.querySelector(`[data-dia="${key}"]`);
     const diaPagamento = diaInput ? (parseInt(diaInput.value,10) || null) : null;
-    try{
-      await sbUpdate('parametros', 'chave', key, {atraso_meses: atrasoMeses, dia_pagamento: diaPagamento});
-      btn.textContent = 'Salvo ✓'; setTimeout(()=>btn.textContent='Salvar', 1200);
-    } catch(err){
-      alert('Não foi possível salvar (' + (err && err.message || 'erro') + '). Tente novamente.');
-    }
+    await salvarComFeedback(btn, ()=> sbUpdate('parametros', 'chave', key, {atraso_meses: atrasoMeses, dia_pagamento: diaPagamento}));
   }));
 
 }
@@ -1066,25 +1074,12 @@ document.getElementById('btnSalvarUnimedQuinzenas').addEventListener('click', as
   const p1 = parseInt(document.getElementById('fUnimedP1').value, 10);
   const p2 = parseInt(document.getElementById('fUnimedP2').value, 10);
   if(!p1 || !p2 || p1<1 || p1>31 || p2<1 || p2>31 || p1>=p2){ alert('Informem dois dias válidos, com o início da 1ª quinzena antes do início da 2ª.'); return; }
-  const btn = document.getElementById('btnSalvarUnimedQuinzenas');
-  const originalText = btn.textContent;
-  btn.disabled = true; btn.textContent = 'Salvando…';
-  try{
-    await sbUpdate('config', 'id', 1, {unimed_p1_dia: p1, unimed_p2_dia: p2});
-  } catch(err){
-    alert('Não foi possível salvar (' + (err && err.message || 'erro') + '). Tente novamente.');
-  } finally {
-    btn.disabled = false; btn.textContent = originalText;
-  }
+  await salvarComFeedback(document.getElementById('btnSalvarUnimedQuinzenas'), ()=> sbUpdate('config', 'id', 1, {unimed_p1_dia: p1, unimed_p2_dia: p2}));
 });
 document.getElementById('btnSalvarRepasse').addEventListener('click', async ()=>{
   const pct = parseFloat(document.getElementById('fRepasse').value);
-  if(isNaN(pct)) return;
-  try{
-    await sbUpdate('config', 'id', 1, {repasse_mariana: pct/100});
-  } catch(err){
-    alert('Não foi possível salvar (' + (err && err.message || 'erro') + '). Tente novamente.');
-  }
+  if(isNaN(pct) || pct < 0 || pct > 100){ alert('Informem um percentual entre 0 e 100.'); return; }
+  await salvarComFeedback(document.getElementById('btnSalvarRepasse'), ()=> sbUpdate('config', 'id', 1, {repasse_mariana: pct/100}));
 });
 
 function renderAll(){
