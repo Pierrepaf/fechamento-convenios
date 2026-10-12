@@ -241,6 +241,35 @@
       <p class="hint" style="margin:0 0 14px">Com base no que já foi lançado — vale mesmo que ainda não tenha entrado em nenhum protocolo.</p>
       <div class="acao-grid" id="kpis"></div>
 
+      <h2 style="margin:30px 0 4px">Quanto de cada protocolo é de cada uma</h2>
+      <p class="hint" style="margin:0 0 14px">Quando um convênio pagar um protocolo, procurem ele aqui para ver quanto é trabalho da Lenice e quanto é da Mariana. Valores brutos, antes do repasse para a clínica.</p>
+
+      <div class="card">
+        <div class="card-pad">
+          <div class="filter-bar">
+            <div class="filter-label">🔎 Filtros — só o que aparece na lista abaixo</div>
+            <div class="toolbar">
+              <div class="field"><label>Convênio</label>
+                <select id="repFiltroConvenio"><option value="">Todos</option>
+                  <option value="AMIL">Amil</option><option value="BRADESCO">Bradesco</option>
+                  <option value="PORTO_SEGURO">Porto Seguro</option><option value="UNIMED">Unimed</option><option value="PETROBRAS">Petrobras</option>
+                </select>
+              </div>
+              <div class="field"><label>Mês de atendimento</label><select id="repFiltroMes"><option value="">Todos</option></select></div>
+              <div class="field"><label>Status</label>
+                <select id="repFiltroStatus"><option value="">Todos</option><option value="recebido">Recebido</option><option value="aguardando">Aguardando</option></select>
+              </div>
+              <div class="field" style="flex:1; min-width:160px"><label>Protocolo</label><input type="text" id="repFiltroNumero" placeholder="buscar número…"></div>
+            </div>
+          </div>
+          <div class="table-wrap"><table>
+            <thead><tr><th>Protocolo</th><th>Convênio</th><th>Mês de atendimento</th><th>Status</th><th class="right">Lenice</th><th class="right">Mariana</th><th class="right">Total</th></tr></thead>
+            <tbody id="tblRepartoProtocolos"></tbody>
+            <tfoot id="tftRepartoProtocolos"></tfoot>
+          </table></div>
+        </div>
+      </div>
+
       <h2 style="margin:30px 0 4px">O que precisa de atenção</h2>
       <p class="hint" style="margin:0 0 14px">Do lançamento até o dinheiro cair no banco — em que ponto cada etapa está.</p>
 
@@ -376,6 +405,6 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="config.js?v=20261008b"></script>
-<script src="app.js?v=20261011a"></script>
+<script src="app.js?v=20261012a"></script>
 </body>
 </html>

@@ -794,6 +794,55 @@ function renderProtocolos(){
 }
 
 // ---------------- Relatório ----------------
+// "Por protocolo — Lenice × Mariana": each protocolo's linked lançamentos split by doctor.
+['repFiltroConvenio','repFiltroMes','repFiltroStatus'].forEach(id=>document.getElementById(id).addEventListener('change', renderRepartoProtocolos));
+document.getElementById('repFiltroNumero').addEventListener('input', renderRepartoProtocolos);
+
+function renderRepartoProtocolos(){
+  const mesSel = document.getElementById('repFiltroMes');
+  const meses = Array.from(new Set(state.protocolos.filter(p=>!p.arquivado).map(p=>p.mes))).sort().reverse();
+  const mesAtual = mesSel.value;
+  mesSel.innerHTML = '<option value="">Todos</option>' + meses.map(m=>`<option value="${m}">${monthLabel(m)}</option>`).join('');
+  if(meses.includes(mesAtual)) mesSel.value = mesAtual;
+
+  const convenio = document.getElementById('repFiltroConvenio').value;
+  const mes = mesSel.value;
+  const status = document.getElementById('repFiltroStatus').value;
+  const busca = document.getElementById('repFiltroNumero').value.trim().toLowerCase();
+
+  const rows = state.protocolos
+    .filter(p=> !p.arquivado && (!convenio || p.convenio===convenio) && (!mes || p.mes===mes) &&
+      (!status || (status==='recebido') === !!p.recebido) && (!busca || String(p.numero).toLowerCase().includes(busca)))
+    .sort((a,b)=> b.mes.localeCompare(a.mes) || a.convenio.localeCompare(b.convenio) || String(a.numero).localeCompare(String(b.numero)))
+    .map(p=> ({ p, agg: protoAggregates(p.id) }));
+
+  const tbody = document.getElementById('tblRepartoProtocolos');
+  const tfoot = document.getElementById('tftRepartoProtocolos');
+  if(rows.length===0){
+    tbody.innerHTML = `<tr><td colspan="7" class="empty">Nenhum protocolo encontrado.</td></tr>`;
+    tfoot.innerHTML = '';
+    return;
+  }
+  tbody.innerHTML = rows.map(({p, agg})=>`<tr>
+      <td>${p.numero}</td>
+      <td>${CONVENIO_LABEL[p.convenio]||p.convenio}</td>
+      <td>${monthLabel(p.mes)}</td>
+      <td>${p.recebido
+        ? `<span class="pill sage">recebido${p.data_recebida ? ' ' + p.data_recebida.split('-').reverse().join('/') : ''}</span>`
+        : '<span class="pill amber">aguardando</span>'}</td>
+      <td class="right num">${fmtBRL(agg.lenice)}</td>
+      <td class="right num">${fmtBRL(agg.mariana)}</td>
+      <td class="right num" style="font-weight:600">${fmtBRL(agg.somado)}</td>
+    </tr>`).join('');
+  const soma = k => rows.reduce((s,r)=> s + r.agg[k], 0);
+  tfoot.innerHTML = `<tr style="border-top:2px solid var(--border)">
+      <td colspan="4" style="font-weight:600">Total (${rows.length} protocolo${rows.length>1?'s':''})</td>
+      <td class="right num" style="font-weight:600">${fmtBRL(soma('lenice'))}</td>
+      <td class="right num" style="font-weight:600">${fmtBRL(soma('mariana'))}</td>
+      <td class="right num" style="font-weight:700">${fmtBRL(soma('somado'))}</td>
+    </tr>`;
+}
+
 const N_MONTHS = 8;
 function projectionRows(filterFn){
   const start = todayMonthKey();
@@ -1042,6 +1091,7 @@ function renderAll(){
   renderLancamentos();
   renderProtocolos();
   renderRelatorio();
+  renderRepartoProtocolos();
   renderParametros();
 }
 
